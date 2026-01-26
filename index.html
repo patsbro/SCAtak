@@ -5,186 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SCAtak | Commander</title>
+    <title>SCAtak | Scientists' Cliffs</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        :root { 
-            --safe: #10b981;   /* Green */
-            --busy: #f59e0b;   /* Orange */
-            --danger: #ef4444; /* Red */
-            --offline: #6b7280;/* Grey */
-            --dark: #1e293b;
-            --light: #f8fafc;
-        }
-
+        :root { --safe: #10b981; --busy: #f59e0b; --danger: #ef4444; --dark: #1e293b; }
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; height: 100vh; background: var(--dark); }
         
-        /* --- MAP LAYER --- */
+        /* Map & Tools */
         #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-
-        /* --- UI CONTROLS (Top Right) --- */
-        .map-tools {
-            position: absolute; top: 50px; right: 20px; z-index: 2000;
-            display: flex; flex-direction: column; gap: 12px;
+        .map-tools { position: absolute; top: 50px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+        .tool-btn { width: 50px; height: 50px; border-radius: 12px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        /* Bottom Panel (Phone) / Sidebar (PC) */
+        .panel { 
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); 
+            border-top-left-radius: 24px; border-top-right-radius: 24px; 
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.3); z-index: 3000; 
+            display: flex; flex-direction: column; height: 45vh; 
+            transition: height 0.3s ease; 
         }
-        .tool-btn {
-            width: 50px; height: 50px; border-radius: 12px; background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: none; font-size: 24px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: transform 0.1s;
-        }
-        .tool-btn:active { transform: scale(0.95); }
-
-        /* --- BOTTOM SHEET (Mobile) / SIDEBAR (Desktop) --- */
-        .panel {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
-            border-top-left-radius: 24px; border-top-right-radius: 24px;
-            box-shadow: 0 -5px 30px rgba(0,0,0,0.3); z-index: 3000;
-            display: flex; flex-direction: column;
-            height: 40vh; /* Default height */
-            transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        /* Desktop Mode Override */
-        @media (min-width: 768px) {
-            .panel {
-                top: 20px; left: 20px; bottom: 20px; width: 350px; height: auto;
-                border-radius: 20px;
-            }
+        @media (min-width: 768px) { 
+            .panel { top: 20px; left: 20px; bottom: 20px; width: 350px; height: auto; border-radius: 20px; } 
             .drag-handle { display: none !important; }
         }
 
-        /* Drag Handle (Mobile Only) */
-        .drag-handle {
-            width: 100%; padding: 15px 0; display: flex; justify-content: center;
-            cursor: pointer;
-        }
+        .drag-handle { width: 100%; padding: 15px 0; display: flex; justify-content: center; cursor: pointer; }
         .handle-bar { width: 40px; height: 5px; background: #cbd5e1; border-radius: 10px; }
-
-        /* Panel Content */
         .panel-content { padding: 0 20px 20px 20px; overflow-y: auto; flex: 1; }
 
-        /* Input Styles */
-        .input-box {
-            width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px;
-            font-size: 16px; font-weight: 600; margin-bottom: 15px; box-sizing: border-box;
-            outline: none; transition: border-color 0.2s;
-        }
-        .input-box:focus { border-color: var(--dark); }
-
-        /* Status Buttons Grid */
+        /* UI Elements */
+        .input-box { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; font-weight: 600; margin-bottom: 15px; box-sizing: border-box; }
         .status-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .status-btn {
-            padding: 15px 5px; border: none; border-radius: 12px; color: white; font-weight: 800;
-            font-size: 14px; cursor: pointer; text-transform: uppercase;
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-            opacity: 0.6; transform: scale(0.95); transition: 0.2s;
-        }
-        .status-btn.active { opacity: 1; transform: scale(1); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        
-        /* Colors */
-        .btn-green { background: var(--safe); }
-        .btn-orange { background: var(--busy); }
-        .btn-red { background: var(--danger); }
+        .status-btn { padding: 15px 5px; border: none; border-radius: 12px; color: white; font-weight: 800; font-size: 13px; cursor: pointer; opacity: 0.6; display:flex; flex-direction:column; align-items:center; gap:5px; }
+        .status-btn.active { opacity: 1; transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
 
-        /* Toggle Tabs */
         .nav-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 15px; }
-        .nav-item { 
-            flex: 1; text-align: center; padding: 10px; font-weight: 600; font-size: 14px; 
-            border-radius: 8px; color: #64748b; cursor: pointer;
-        }
+        .nav-item { flex: 1; text-align: center; padding: 10px; font-weight: 600; font-size: 14px; border-radius: 8px; color: #64748b; cursor: pointer; }
         .nav-item.active { background: white; color: var(--dark); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        /* Chat Area */
-        .chat-container { display: flex; flex-direction: column; height: 100%; }
-        .messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 8px; padding-bottom: 10px; }
-        
-        .msg-bubble { 
-            max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4;
-            position: relative; animation: popIn 0.2s ease-out;
-        }
-        @keyframes popIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-        .msg-mine { align-self: flex-end; background: var(--dark); color: white; border-bottom-right-radius: 2px; }
-        .msg-theirs { align-self: flex-start; background: #e2e8f0; color: var(--dark); border-bottom-left-radius: 2px; }
-        .msg-meta { font-size: 10px; opacity: 0.7; margin-bottom: 2px; display: block; }
-
-        .chat-input-row { display: flex; gap: 8px; margin-top: auto; }
-        .send-btn { width: 50px; background: var(--dark); color: white; border: none; border-radius: 12px; cursor: pointer; }
-
-        /* --- MARKER STYLES --- */
-        .pulse-marker {
-            width: 32px; height: 32px; border-radius: 50%; border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-weight: 800; font-family: 'Inter', sans-serif; font-size: 14px;
-        }
-        /* CSS Pulse Animation */
-        .pulse-ring {
-            position: absolute; top: -10px; left: -10px; width: 52px; height: 52px;
-            border-radius: 50%; border: 2px solid currentColor; opacity: 0;
-            animation: pulse 2s infinite; pointer-events: none;
-        }
+        /* Markers */
+        .pulse-marker { width: 34px; height: 34px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 14px; }
+        .pulse-ring { position: absolute; top: -10px; left: -10px; width: 54px; height: 54px; border-radius: 50%; border: 2px solid currentColor; opacity: 0; animation: pulse 2s infinite; pointer-events: none; }
         @keyframes pulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.2); opacity: 0; } }
 
+        /* Chat */
+        .msg-bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; margin-bottom: 8px; max-width: 85%; }
+        .msg-mine { align-self: flex-end; background: var(--dark); color: white; margin-left: auto; border-bottom-right-radius: 2px; }
+        .msg-theirs { align-self: flex-start; background: #e2e8f0; color: var(--dark); border-bottom-left-radius: 2px; }
     </style>
 </head>
 <body>
 
     <div class="map-tools">
-        <button class="tool-btn" onclick="toggleSat()" title="Toggle Satellite">🛰️</button>
-        <button class="tool-btn" onclick="centerMap()" title="Center Me">📍</button>
+        <button class="tool-btn" onclick="toggleSat()">🛰️</button>
+        <button class="tool-btn" onclick="centerMap()">📍</button>
     </div>
 
     <div id="map"></div>
 
     <div class="panel" id="mainPanel">
-        <div class="drag-handle" onclick="togglePanelSize()">
-            <div class="handle-bar"></div>
-        </div>
-
+        <div class="drag-handle" onclick="togglePanel()"><div class="handle-bar"></div></div>
         <div class="panel-content">
+            
             <div class="nav-tabs">
-                <div class="nav-item active" onclick="switchView('status')" id="tab-status">STATUS</div>
-                <div class="nav-item" onclick="switchView('chat')" id="tab-chat">TEAM CHAT</div>
+                <div class="nav-item active" onclick="switchTab('status')" id="tab-status">STATUS</div>
+                <div class="nav-item" onclick="switchTab('chat')" id="tab-chat">TEAM CHAT</div>
             </div>
 
             <div id="view-status">
-                <input type="text" id="username" class="input-box" placeholder="Enter Unit Name / ID">
+                <input type="text" id="username" class="input-box" placeholder="Unit ID (e.g. SCA-1)">
                 
                 <div class="status-grid">
-                    <button class="status-btn btn-green" onclick="setStatus('#10b981', 'Active')">
-                        <span>🟢</span> ACTIVE
-                    </button>
-                    <button class="status-btn btn-orange" onclick="setStatus('#f59e0b', 'Busy')">
-                        <span>🟠</span> BUSY
-                    </button>
-                    <button class="status-btn btn-red" onclick="setStatus('#ef4444', 'URGENT')">
-                        <span>🔴</span> URGENT
-                    </button>
+                    <button class="status-btn" style="background:var(--safe)" onclick="setStatus('#10b981', 'Active')">🟢 ACTIVE</button>
+                    <button class="status-btn" style="background:var(--busy)" onclick="setStatus('#f59e0b', 'BUSY')">🟠 BUSY</button>
+                    <button class="status-btn" style="background:var(--danger)" onclick="setStatus('#ef4444', 'URGENT')">🔴 URGENT</button>
                 </div>
 
-                <button id="gpsBtn" class="input-box" style="background: var(--dark); color: white; border: none; cursor: pointer;" onclick="goOnline()">
-                    📡 GO ONLINE (START GPS)
-                </button>
-                <div id="connectionStatus" style="text-align: center; font-size: 12px; color: #64748b; margin-top: 10px;">
-                    Offline
+                <button id="gpsBtn" class="input-box" style="background: var(--dark); color: white; border: none; cursor:pointer;" onclick="goOnline()">📡 GO ONLINE</button>
+                <div id="statusText" style="text-align: center; font-size: 12px; color: #64748b; margin-top: 5px;">Offline</div>
+            </div>
+
+            <div id="view-chat" style="display:none; height:100%; display:flex; flex-direction:column;">
+                <div id="chatList" style="flex:1; overflow-y:auto; display:flex; flex-direction:column-reverse; padding-bottom:10px;"></div>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="chatInput" class="input-box" placeholder="Message..." style="margin:0;">
+                    <button onclick="sendMsg()" class="input-box" style="width:60px; margin:0; background:var(--dark); color:white;">➤</button>
                 </div>
             </div>
 
-            <div id="view-chat" style="display: none; height: 300px;">
-                <div class="chat-container">
-                    <div class="messages-list" id="chatList"></div>
-                    <div class="chat-input-row">
-                        <input type="text" id="chatInput" class="input-box" placeholder="Message..." style="margin:0;">
-                        <button class="send-btn" onclick="sendMessage()">➤</button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -193,7 +105,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // --- 1. FIREBASE CONFIG ---
+        // --- CONFIG: ENSURE URL IS CORRECT ---
         const firebaseConfig = {
             apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
             authDomain: "sca-tak.firebaseapp.com",
@@ -201,185 +113,110 @@
             storageBucket: "sca-tak.firebasestorage.app",
             messagingSenderId: "1073161858259",
             appId: "1:1073161858259:web:a860ae211ff3d32e1a7826",
-            databaseURL: "https://sca-tak-default-rtdb.firebaseio.com"
+            databaseURL: "https://sca-tak-default-rtdb.firebaseio.com" // <--- CHECK THIS MATCHES YOUR CONSOLE
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 2. MAP SETUP ---
-        const map = L.map('map', { zoomControl: false }).setView([38.514, -76.516], 14); // Scientists' Cliffs
-        
-        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-        streetLayer.addTo(map);
+        // --- MAP ---
+        const map = L.map('map', { zoomControl: false }).setView([38.514, -76.516], 15); // Scientists' Cliffs
+        const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-        // --- 3. STATE MANAGEMENT ---
-        let myColor = "#6b7280"; // Default Grey
+        let myColor = "#6b7280";
         let myStatus = "Offline";
-        let watchID = null;
 
-        // --- 4. GPS & STATUS LOGIC ---
+        // --- TRACKING ---
         function goOnline() {
             const name = document.getElementById('username').value;
-            if(!name) return alert("Enter Unit Name first!");
+            if(!name) return alert("Enter Unit ID first");
 
-            // Lock the input
-            document.getElementById('username').disabled = true;
-            document.getElementById('gpsBtn').innerHTML = "⏳ LOCATING...";
-
-            if (navigator.geolocation) {
-                watchID = navigator.geolocation.watchPosition(pos => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-
-                    // If this is the first fix, set to Green/Active automatically
+            if(navigator.geolocation) {
+                navigator.geolocation.watchPosition(pos => {
+                    // Auto-set to Active on first connect
                     if(myStatus === "Offline") setStatus('#10b981', 'Active');
 
-                    // Sync to Cloud
                     db.ref('units/' + name).update({
-                        lat: lat,
-                        lng: lng,
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
                         color: myColor,
                         status: myStatus,
                         lastSeen: Date.now()
                     });
 
-                    // UI Updates
-                    document.getElementById('gpsBtn').innerHTML = "🟢 TRACKING ACTIVE";
+                    document.getElementById('gpsBtn').innerHTML = "🟢 ONLINE";
                     document.getElementById('gpsBtn').style.background = "#10b981";
-                    document.getElementById('connectionStatus').innerText = `GPS Accuracy: ${Math.round(pos.coords.accuracy)}m`;
-
-                    // Only center map on the very first fix
-                    if(!window.hasCentered) {
-                        map.setView([lat, lng], 16);
-                        window.hasCentered = true;
-                    }
-
-                }, err => {
-                    alert("GPS Blocked. Check Settings.");
-                    document.getElementById('gpsBtn').innerHTML = "❌ GPS DENIED";
-                }, { enableHighAccuracy: true });
+                    document.getElementById('statusText').innerText = "Connected to SCAtak Cloud";
+                }, err => alert("GPS Error: " + err.message), { enableHighAccuracy: true });
             }
         }
 
-        function setStatus(color, statusText) {
-            const name = document.getElementById('username').value;
-            if(!name) return alert("Enter Unit Name first!");
-
-            myColor = color;
-            myStatus = statusText;
-
-            // Highlight the button
+        function setStatus(color, text) {
+            myColor = color; myStatus = text;
+            // UI Toggle
             document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
-            if(statusText === 'Active') document.querySelector('.btn-green').classList.add('active');
-            if(statusText === 'Busy') document.querySelector('.btn-orange').classList.add('active');
-            if(statusText === 'URGENT') document.querySelector('.btn-red').classList.add('active');
-
-            // Force immediate update to cloud (don't wait for next GPS ping)
-            if(watchID) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    db.ref('units/' + name).update({
-                        color: myColor,
-                        status: myStatus,
-                        lastSeen: Date.now()
-                    });
-                });
-            }
+            if(text === 'Active') document.querySelectorAll('.status-btn')[0].classList.add('active');
+            if(text === 'BUSY') document.querySelectorAll('.status-btn')[1].classList.add('active');
+            if(text === 'URGENT') document.querySelectorAll('.status-btn')[2].classList.add('active');
+            
+            // Update Cloud immediately
+            const name = document.getElementById('username').value;
+            if(name) db.ref('units/' + name).update({ color: color, status: text, lastSeen: Date.now() });
         }
 
-        // --- 5. RENDER TEAM MARKERS ---
+        // --- MARKERS ---
         let markers = {};
-        db.ref('units/').on('value', snapshot => {
-            const units = snapshot.val();
+        db.ref('units/').on('value', snap => {
+            const units = snap.val();
             if(!units) return;
-
             for(let name in units) {
                 const u = units[name];
-                const firstLetter = name.charAt(0).toUpperCase();
-
                 if(markers[name]) map.removeLayer(markers[name]);
 
                 const html = `
-                    <div style="position: relative; color: ${u.color}">
-                        <div class="pulse-marker" style="background:${u.color};">
-                            ${firstLetter}
-                        </div>
+                    <div style="position: relative; color:${u.color}">
+                        <div class="pulse-marker" style="background:${u.color}">${name.charAt(0)}</div>
                         <div class="pulse-ring"></div>
-                        <div style="
-                            position:absolute; top:-20px; left:50%; transform:translateX(-50%);
-                            background:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; color:black; white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.2);">
-                            ${name}
-                        </div>
-                    </div>
-                `;
-
-                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [32, 32], iconAnchor: [16, 16] });
+                        <div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); background:white; padding:2px 5px; border-radius:4px; font-size:10px; font-weight:bold; color:black; white-space:nowrap; box-shadow:0 2px 5px rgba(0,0,0,0.2);">${name}</div>
+                    </div>`;
+                
+                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [34, 34], iconAnchor: [17, 17] });
                 markers[name] = L.marker([u.lat, u.lng], {icon: icon}).addTo(map)
-                    .bindPopup(`<b>${name}</b><br>${u.status}<br><small>Seen: ${new Date(u.lastSeen).toLocaleTimeString()}</small>`);
+                    .bindPopup(`<b>${name}</b><br>${u.status}<br><small>${new Date(u.lastSeen).toLocaleTimeString()}</small>`);
             }
         });
 
-        // --- 6. CHAT SYSTEM ---
-        function sendMessage() {
+        // --- CHAT ---
+        function sendMsg() {
             const text = document.getElementById('chatInput').value;
             const user = document.getElementById('username').value || "Dispatch";
-            if(!text) return;
-
-            db.ref('chat/').push({
-                user: user,
-                text: text,
-                timestamp: Date.now()
-            });
-            document.getElementById('chatInput').value = "";
+            if(text) {
+                db.ref('chat/').push({ user, text, timestamp: Date.now() });
+                document.getElementById('chatInput').value = "";
+            }
         }
-
-        db.ref('chat/').limitToLast(50).on('child_added', snapshot => {
-            const msg = snapshot.val();
-            const myName = document.getElementById('username').value;
-            const isMe = msg.user === myName;
-
+        db.ref('chat/').limitToLast(50).on('child_added', snap => {
+            const m = snap.val();
+            const isMe = m.user === document.getElementById('username').value;
             const div = document.createElement('div');
             div.className = `msg-bubble ${isMe ? 'msg-mine' : 'msg-theirs'}`;
-            div.innerHTML = `<span class="msg-meta">${msg.user}</span>${msg.text}`;
-            
-            const list = document.getElementById('chatList');
-            list.prepend(div); // Add new messages to the bottom (technically top of flex-reversed list)
+            div.innerHTML = `<b>${m.user}</b><br>${m.text}`;
+            document.getElementById('chatList').prepend(div);
         });
 
-        // --- 7. UI HELPERS ---
-        function switchView(view) {
-            document.getElementById('view-status').style.display = view === 'status' ? 'block' : 'none';
-            document.getElementById('view-chat').style.display = view === 'chat' ? 'block' : 'none';
-            document.getElementById('tab-status').className = `nav-item ${view === 'status' ? 'active' : ''}`;
-            document.getElementById('tab-chat').className = `nav-item ${view === 'chat' ? 'active' : ''}`;
-            
-            // Expand panel for chat
-            if(view === 'chat') {
-                document.getElementById('mainPanel').style.height = '60vh';
-            }
+        // --- UTILS ---
+        function togglePanel() { 
+            const p = document.getElementById('mainPanel');
+            p.style.height = p.style.height === '80px' ? '45vh' : '80px';
         }
-
-        function togglePanelSize() {
-            const panel = document.getElementById('mainPanel');
-            // Toggle between 15% (minimized) and 40% (regular)
-            panel.style.height = panel.style.height === '100px' ? '40vh' : '100px';
+        function switchTab(t) {
+            document.getElementById('view-status').style.display = t === 'status' ? 'block' : 'none';
+            document.getElementById('view-chat').style.display = t === 'chat' ? 'flex' : 'none';
+            document.getElementById('tab-status').classList.toggle('active', t === 'status');
+            document.getElementById('tab-chat').classList.toggle('active', t === 'chat');
         }
-
-        function toggleSat() {
-            if (map.hasLayer(satLayer)) {
-                map.removeLayer(satLayer);
-                map.addLayer(streetLayer);
-            } else {
-                map.removeLayer(streetLayer);
-                map.addLayer(satLayer);
-            }
-        }
-
-        function centerMap() {
-            navigator.geolocation.getCurrentPosition(pos => {
-                map.setView([pos.coords.latitude, pos.coords.longitude], 17);
-            });
-        }
+        function toggleSat() { map.hasLayer(sat) ? (map.removeLayer(sat), map.addLayer(street)) : (map.removeLayer(street), map.addLayer(sat)); }
+        function centerMap() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
     </script>
 </body>
 </html>
