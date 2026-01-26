@@ -13,7 +13,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- THEME --- */
         :root { 
             --bg-dark: #0f172a; --panel: #1e293b; --border: #334155; 
             --accent: #0ea5e9; --text: #f8fafc; --danger: #ef4444; --success: #10b981;
@@ -23,60 +22,47 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; padding: 0; background: #000; font-family: 'Inter', sans-serif; color: var(--text); overflow: hidden; height: 100dvh; display: flex; }
 
-        /* --- LAYOUT --- */
         #map-container { flex: 1; position: relative; height: 100%; z-index: 1; }
         #map { width: 100%; height: 100%; background: #1a1a1a; cursor: crosshair; }
 
-        /* SIDEBAR (The Menu) */
         #sidebar {
             width: 380px; height: 100%; background: var(--bg-dark); 
             border-right: 1px solid var(--border); display: flex; flex-direction: column;
             z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.3);
         }
 
-        /* HEADER */
         .sidebar-header { 
             padding: 15px 20px; border-bottom: 1px solid var(--border); 
             display: flex; justify-content: space-between; align-items: center; 
-            background: var(--bg-dark); z-index: 10;
-            flex-shrink: 0; /* Prevents squishing */
+            background: var(--bg-dark); z-index: 10; flex-shrink: 0;
         }
         .app-title { font-weight: 700; color: var(--text); letter-spacing: 0.5px; font-size: 16px; text-transform: uppercase; }
         .lock-icon { cursor: pointer; opacity: 0.4; font-size: 16px; transition: 0.2s; }
         .lock-icon.unlocked { opacity: 1; color: var(--success); }
 
-        /* DESKTOP TABS (HIDDEN ON MOBILE) */
         .desktop-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
         .dt-btn { flex: 1; padding: 14px; background: none; border: none; color: #64748b; font-weight: 600; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; }
         .dt-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        /* CONTENT AREA */
         .tab-content { flex: 1; overflow-y: auto; padding: 20px; display: none; }
         .tab-content.active { display: block; }
 
-        /* --- MOBILE OVERRIDES --- */
         @media (max-width: 768px) {
             body { flex-direction: column-reverse; } 
             
-            /* Hide Desktop Tabs on Phone */
             .desktop-tabs { display: none !important; }
 
-            /* Sidebar becomes Slide-Up Sheet */
             #sidebar {
                 position: absolute; bottom: 0; left: 0; width: 100%; 
-                /* Start hidden (height 0), but account for bottom nav padding */
                 height: 0; 
                 border-right: none; border-top: 1px solid var(--border);
                 transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
                 overflow: hidden; z-index: 300;
-                /* Add padding to bottom so content isn't covered by nav */
                 padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
             }
             
-            /* When open, slide up */
             #sidebar.open { height: 70vh; border-radius: 20px 20px 0 0; }
             
-            /* Mobile Bottom Nav */
             #mobile-nav {
                 height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
                 background: var(--bg-dark); 
@@ -88,17 +74,15 @@
         }
         @media (min-width: 769px) { #mobile-nav { display: none; } }
 
-        /* MOBILE BUTTONS */
         .mn-btn { 
             flex: 1; background: none; border: none; color: #64748b; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             gap: 4px; font-size: 10px; font-weight: 600; cursor: pointer; 
-            height: 100%; /* Fill nav bar */
+            height: 100%; 
         }
         .mn-btn svg { width: 24px; height: 24px; fill: currentColor; }
         .mn-btn.active { color: var(--accent); background: rgba(255,255,255,0.03); }
 
-        /* FORMS & BUTTONS */
         .input-group { margin-bottom: 15px; }
         .label { font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 6px; display: block; }
         .input-box { width: 100%; padding: 12px; background: var(--panel); border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 14px; -webkit-appearance: none; }
@@ -107,7 +91,6 @@
         .btn-danger { background: var(--danger); }
         .btn-dark { background: #334155; }
 
-        /* MARKER TOOLS */
         .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .tool-btn { 
             background: var(--panel); border: 1px solid var(--border); color: var(--text); 
@@ -116,7 +99,6 @@
         }
         .tool-btn svg { width: 24px; height: 24px; fill: var(--text); }
 
-        /* MAP ELEMENTS */
         #map-overlay {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent); 
@@ -127,7 +109,7 @@
         .map-controls-group {
             position: absolute; bottom: 20px; right: 15px; z-index: 400; 
             display: flex; flex-direction: column; gap: 12px;
-            margin-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
+            margin-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 10px);
         }
         @media (min-width: 769px) { .map-controls-group { margin-bottom: 0; } }
 
@@ -137,7 +119,6 @@
             color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
 
-        /* MODAL */
         #custom-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.8); z-index: 2000; display: none;
@@ -148,12 +129,10 @@
             border-radius: 16px; width: 90%; max-width: 350px; text-align: center;
         }
 
-        /* MARKERS */
         .marker-pin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
         .shape-diamond { width: 14px; height: 14px; transform: rotate(45deg); border: 2px solid white; }
         .shape-square { width: 14px; height: 14px; border: 2px solid white; }
         .shape-circle { width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; }
-
     </style>
 </head>
 <body>
@@ -279,7 +258,6 @@
         const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-        // TAB LOGIC
         let currentTab = 'status';
 
         function switchTab(id) {
@@ -298,7 +276,6 @@
 
         function toggleTab(id) {
             const sidebar = document.getElementById('sidebar');
-            // If already open and on same tab, close it
             if (sidebar.classList.contains('open') && currentTab === id) {
                 sidebar.classList.remove('open');
                 document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
@@ -313,7 +290,6 @@
             document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
         }
 
-        // MAP CLICK HANDLER
         let placingType = null;
         let pendingClick = null;
 
@@ -350,7 +326,6 @@
             closeModal();
         }
 
-        // ADMIN
         let isAdmin = false;
         function toggleAdmin() {
             if(isAdmin) return;
@@ -369,13 +344,11 @@
             document.getElementById('manager-task-creator').style.display = 'none';
         }
 
-        // ADMIN UTILS
         function clearMap() { if(confirm("Reset Markups?")) db.ref('markups/').remove(); }
         function clearUnits() { if(confirm("Reset Users?")) db.ref('units/').remove(); }
         function clearChat() { if(confirm("Reset Chat?")) db.ref('chat/').remove(); }
         function clearTasks() { if(confirm("Reset Tasks?")) db.ref('tasks/').remove(); }
 
-        // MARKERS
         let markers = {};
         db.ref('markups/').on('value', snap => {
             for(let id in markers) map.removeLayer(markers[id]);
@@ -394,7 +367,6 @@
             }
         });
 
-        // TRACKING
         let myTrackId = null;
         function toggleTracking() {
             if(myTrackId) {
@@ -420,7 +392,7 @@
 
         let unitLayers = {};
         db.ref('units/').on('value', snap => {
-            for(let n in unitLayers) map.removeLayer(unitLayers[n]);
+            for(let name in unitLayers) map.removeLayer(unitLayers[name]);
             unitLayers = {};
             const units = snap.val();
             const now = Date.now();
@@ -434,7 +406,6 @@
             }
         });
 
-        // TASKS
         function addTask() {
             const txt = document.getElementById('newTaskInput').value;
             if(txt) { db.ref('tasks/').push({ text: txt, done: false }); document.getElementById('newTaskInput').value = ""; }
@@ -453,7 +424,6 @@
         });
         window.toggleTask = (key, stat) => { db.ref('tasks/' + key).update({ done: !stat }); };
 
-        // CHAT
         function sendMsg() {
             const txt = document.getElementById('chatInput').value;
             const user = document.getElementById('username').value || "Anon";
@@ -476,7 +446,6 @@
         function zoomToMe() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
         function zoomToSCA() { map.setView([38.514, -76.516], 15); }
 
-        // Start
         switchTab('status');
         if(window.innerWidth > 768) document.getElementById('sidebar').classList.remove('open');
     </script>
