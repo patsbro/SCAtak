@@ -49,36 +49,38 @@
 
         @media (max-width: 768px) {
             body { flex-direction: column-reverse; } 
-            
             .desktop-tabs { display: none !important; }
 
             #sidebar {
                 position: absolute; bottom: 0; left: 0; width: 100%; 
-                height: 0; 
-                border-right: none; border-top: 1px solid var(--border);
+                height: 0; border-right: none; border-top: 1px solid var(--border);
                 transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
                 overflow: hidden; z-index: 300;
                 padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
             }
-            
             #sidebar.open { height: 70vh; border-radius: 20px 20px 0 0; }
             
             #mobile-nav {
                 height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
-                background: var(--bg-dark); 
-                border-top: 1px solid var(--border); 
+                background: var(--bg-dark); border-top: 1px solid var(--border); 
                 display: flex; z-index: 400; width: 100%;
                 padding-bottom: env(safe-area-inset-bottom);
                 position: relative;
             }
+
+            /* FORCE CONTROLS TO BOTTOM */
+            .map-controls-group {
+                top: auto !important;
+                bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 20px) !important;
+                right: 15px !important;
+                flex-direction: column !important;
+            }
         }
-        @media (min-width: 769px) { #mobile-nav { display: none; } }
 
         .mn-btn { 
             flex: 1; background: none; border: none; color: #64748b; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            gap: 4px; font-size: 10px; font-weight: 600; cursor: pointer; 
-            height: 100%; 
+            gap: 4px; font-size: 10px; font-weight: 600; cursor: pointer; height: 100%; 
         }
         .mn-btn svg { width: 24px; height: 24px; fill: currentColor; }
         .mn-btn.active { color: var(--accent); background: rgba(255,255,255,0.03); }
@@ -106,12 +108,11 @@
             z-index: 500; display: none; pointer-events: none;
         }
         
+        /* DEFAULT DESKTOP POSITION */
         .map-controls-group {
-            position: absolute; bottom: 20px; right: 15px; z-index: 400; 
+            position: absolute; top: 20px; right: 15px; z-index: 400; 
             display: flex; flex-direction: column; gap: 12px;
-            margin-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 10px);
         }
-        @media (min-width: 769px) { .map-controls-group { margin-bottom: 0; } }
 
         .map-btn {
             width: 44px; height: 44px; border-radius: 12px; 
@@ -153,14 +154,12 @@
             <div class="app-title">SCAtak</div>
             <div id="lockIcon" class="lock-icon" onclick="toggleAdmin()">🔒</div>
         </div>
-
         <div class="desktop-tabs">
             <button class="dt-btn active" onclick="switchTab('status')">STATUS</button>
             <button class="dt-btn" onclick="switchTab('work')">WORK</button>
             <button class="dt-btn" onclick="switchTab('mark')">MARKER</button>
             <button class="dt-btn" onclick="switchTab('chat')">CHAT</button>
         </div>
-
         <div id="tab-status" class="tab-content active">
             <div id="admin-panel" style="display:none; padding:15px; background:rgba(239,68,68,0.1); border-radius:8px; margin-bottom:20px; border:1px solid var(--danger);">
                 <div style="font-size:10px; font-weight:700; color:var(--danger); margin-bottom:10px;">SUPERVISOR</div>
@@ -172,7 +171,6 @@
                 </div>
                 <button class="btn btn-dark" style="margin-top:8px;" onclick="logoutAdmin()">Logout</button>
             </div>
-
             <div class="input-group">
                 <span class="label">Identity</span>
                 <input type="text" id="username" class="input-box" placeholder="Unit ID">
@@ -189,7 +187,6 @@
             <button class="btn btn-primary" id="trackBtn" onclick="toggleTracking()">START TRACKING</button>
             <div id="gps-status" style="text-align:center; font-size:11px; color:#64748b; margin-top:8px;">GPS Inactive</div>
         </div>
-
         <div id="tab-work" class="tab-content">
             <div id="manager-task-creator" style="display:none; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid var(--border);">
                 <input type="text" id="newTaskInput" class="input-box" placeholder="New Task...">
@@ -197,7 +194,6 @@
             </div>
             <div id="taskList"></div>
         </div>
-
         <div id="tab-mark" class="tab-content">
             <div style="margin-bottom:15px; color:#94a3b8; font-size:12px; text-align:center;">Select tool, then tap map.</div>
             <div class="tool-grid">
@@ -207,7 +203,6 @@
                 <button class="tool-btn" onclick="selectTool('note')"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>NOTE</button>
             </div>
         </div>
-
         <div id="tab-chat" class="tab-content">
             <div id="chat-feed" style="height:300px; overflow-y:auto; display:flex; flex-direction:column-reverse; margin-bottom:10px; border:1px solid var(--border); border-radius:6px; background:#0f172a;"></div>
             <div style="display:flex; gap:8px;">
@@ -220,7 +215,6 @@
     <main id="map-container">
         <div id="map"></div>
         <div id="map-overlay">TAP MAP TO PLACE MARKER</div>
-        
         <div class="map-controls-group">
             <div class="map-btn" onclick="toggleSat()">🛰️</div>
             <div class="map-btn" onclick="zoomToSCA()">🏘️</div>
@@ -263,14 +257,11 @@
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
-
             document.querySelectorAll('.dt-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
-
             const idxMap = { 'status': 0, 'work': 1, 'mark': 2, 'chat': 3 };
             if(document.querySelectorAll('.dt-btn')[idxMap[id]]) document.querySelectorAll('.dt-btn')[idxMap[id]].classList.add('active');
             if(document.querySelectorAll('.mn-btn')[idxMap[id]]) document.querySelectorAll('.mn-btn')[idxMap[id]].classList.add('active');
-
             currentTab = id;
         }
 
