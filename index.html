@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SCA Command</title>
+    <link rel="manifest" href="manifest.json"> <title>SCA Command</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
@@ -82,6 +82,7 @@
         .btn:active { transform: translateY(1px); }
         .btn-primary { background: var(--accent); color: #0f172a; }
         .btn-danger { background: var(--danger); }
+        .btn-dark { background: #334155; }
         
         /* MARKER TOOLS GRID */
         .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -136,9 +137,10 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                     <button class="btn btn-danger" onclick="clearMap()">Clear Markups</button>
                     <button class="btn btn-danger" onclick="clearUnits()">Clear Users</button>
+                    <button class="btn btn-danger" onclick="clearTasks()">Clear Tasks</button>
+                    <button class="btn btn-danger" onclick="clearChat()">Clear Chat</button>
                 </div>
-                <button class="btn btn-danger" onclick="clearChat()" style="margin-top:8px;">Clear Chat</button>
-                <button class="btn" style="background:#334155; margin-top:8px;" onclick="logoutAdmin()">Logout</button>
+                <button class="btn btn-dark" style="margin-top:8px;" onclick="logoutAdmin()">Logout</button>
             </div>
 
             <div class="input-group">
@@ -250,25 +252,27 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // --- PWA SERVICE WORKER ---
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('Service Worker Registered'));
+        }
+
         // --- MAP INIT ---
         const map = L.map('map', { zoomControl: false }).setView([38.514, -76.516], 15);
         const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-        // --- MENU LOGIC (IMPROVED) ---
+        // --- MENU LOGIC ---
         let currentTab = 'status';
 
         function switchTab(id) {
-            // Update UI State
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
 
-            // Highlight Desktop Btns
             document.querySelectorAll('.dt-btn').forEach(b => b.classList.remove('active'));
-            // Highlight Mobile Btns
             document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
 
-            // Map Index
             const mapIdx = { 'status': 0, 'work': 1, 'mark': 2, 'chat': 3 };
             if(document.querySelectorAll('.dt-btn')[mapIdx[id]]) document.querySelectorAll('.dt-btn')[mapIdx[id]].classList.add('active');
             if(document.querySelectorAll('.mn-btn')[mapIdx[id]]) document.querySelectorAll('.mn-btn')[mapIdx[id]].classList.add('active');
@@ -278,7 +282,6 @@
 
         function toggleTab(id) {
             const sidebar = document.getElementById('sidebar');
-            // If clicking the active tab while open, close it
             if (currentTab === id && sidebar.classList.contains('open')) {
                 sidebar.classList.remove('open');
                 document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
@@ -295,17 +298,10 @@
 
         // --- MARKER PLACEMENT LOGIC ---
         let placingType = null;
-
         function selectTool(type) {
             placingType = type;
             document.getElementById('map-overlay').style.display = 'block';
-            
-            // Mobile: Close menu so they can see map
             if(window.innerWidth <= 768) closeMenu();
-            
-            // Visual feedback
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            // (Find clicked button logic omitted for brevity, user knows what they clicked)
         }
 
         map.on('click', function(e) {
@@ -320,12 +316,9 @@
                     lat: e.latlng.lat,
                     lng: e.latlng.lng
                 });
-
-                // Reset
                 placingType = null;
                 document.getElementById('map-overlay').style.display = 'none';
             } else {
-                // If not placing, clicking map closes menu on mobile
                 if(window.innerWidth <= 768) closeMenu();
             }
         });
@@ -349,12 +342,13 @@
             document.getElementById('manager-task-creator').style.display = 'none';
         }
 
-        // --- UTILS for Admin ---
+        // --- ADMIN UTILS ---
         function clearMap() { if(confirm("Reset all map markups?")) db.ref('markups/').remove(); }
         function clearUnits() { if(confirm("Reset all active user locations?")) db.ref('units/').remove(); }
         function clearChat() { if(confirm("Delete chat history?")) db.ref('chat/').remove(); }
+        function clearTasks() { if(confirm("Delete all tasks?")) db.ref('tasks/').remove(); }
 
-        // --- MARKER RENDERING (SVG SHAPES) ---
+        // --- MARKER RENDERING ---
         let markers = {};
         db.ref('markups/').on('value', snap => {
             for(let id in markers) map.removeLayer(markers[id]);
@@ -366,9 +360,9 @@
                 let color = '#fff';
                 let shapeClass = 'shape-circle';
                 
-                if(m.type === 'repair') { color = '#38bdf8'; shapeClass = 'shape-square'; } // Blue Square
-                if(m.type === 'hazard') { color = '#ef4444'; shapeClass = 'shape-diamond'; } // Red Diamond
-                if(m.type === 'blocked') { color = '#f59e0b'; shapeClass = 'shape-circle'; } // Orange Circle
+                if(m.type === 'repair') { color = '#38bdf8'; shapeClass = 'shape-square'; } 
+                if(m.type === 'hazard') { color = '#ef4444'; shapeClass = 'shape-diamond'; } 
+                if(m.type === 'blocked') { color = '#f59e0b'; shapeClass = 'shape-circle'; } 
                 
                 const html = `<div class="${shapeClass}" style="border-color:${color}; background:rgba(0,0,0,0.5);"></div>`;
                 const icon = L.divIcon({ className: 'empty', html: html, iconSize: [14,14], iconAnchor: [7,7] });
@@ -405,16 +399,24 @@
 
         let unitLayers = {};
         db.ref('units/').on('value', snap => {
+            for(let name in unitLayers) map.removeLayer(unitLayers[name]); // Clear old to redraw
+            unitLayers = {};
+            
             const units = snap.val();
+            if(!units) return; // Handle empty db case
             const now = Date.now();
+            
             for(let name in units) {
                 const u = units[name];
-                if(now - u.lastSeen > 3600000) { if(unitLayers[name]) map.removeLayer(unitLayers[name]); continue; }
-                if(unitLayers[name]) map.removeLayer(unitLayers[name]);
+                // Hide if stale > 1 hour
+                if(now - u.lastSeen > 3600000) continue; 
                 
                 const html = `<div class="marker-pin" style="background:${u.color}"></div>`;
                 const icon = L.divIcon({ className: 'empty', html: html, iconSize: [16,16], iconAnchor: [8,8] });
-                unitLayers[name] = L.marker([u.lat, u.lng], {icon: icon}).addTo(map).bindPopup(name);
+                
+                // POPUP: Name + Role
+                unitLayers[name] = L.marker([u.lat, u.lng], {icon: icon}).addTo(map)
+                    .bindPopup(`<b>${name}</b><br>${u.role.toUpperCase()}`);
             }
         });
 
