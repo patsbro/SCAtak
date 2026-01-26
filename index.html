@@ -3,79 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>SCAtak | Field Ops</title>
+    <title>SCA-TAK | Scientists' Cliffs</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        :root { --primary: #1a73e8; --bg: #f8f9fa; --danger: #dc2626; --success: #16a34a; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); }
+        :root { --primary: #0f4c81; /* SCA Blueish tone */ --bg: #f0f2f5; --accent: #d97706; }
+        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--bg); }
         
-        #map { flex: 1; width: 100%; z-index: 1; }
+        /* FULL SCREEN MAP */
+        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-        /* Floating Controls */
-        .map-controls { position: absolute; top: 10px; right: 10px; z-index: 900; display: flex; flex-direction: column; gap: 8px; }
-        .ctrl-btn { background: white; border: 2px solid rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .ctrl-btn.active { background: var(--success); color: white; border-color: var(--success); }
-
-        /* Dashboard Slide-up */
-        .dashboard { 
-            height: 40vh; background: white; border-top: 4px solid var(--primary);
-            display: flex; flex-direction: column; z-index: 1000;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.15); border-radius: 20px 20px 0 0;
+        /* FLOATING BUTTONS (Fixed to screen) */
+        .controls-container {
+            position: fixed; top: 15px; right: 15px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 10px;
         }
+        .float-btn {
+            background: white; border: 2px solid rgba(0,0,0,0.2); border-radius: 8px;
+            width: 45px; height: 45px; font-size: 20px; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;
+        }
+        .float-btn:active { background: #eee; transform: scale(0.95); }
 
-        .tabs { display: flex; border-bottom: 1px solid #ddd; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: #555; }
+        /* COLLAPSIBLE DASHBOARD */
+        .dashboard { 
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: white; border-top-left-radius: 20px; border-top-right-radius: 20px;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.3); z-index: 3000;
+            transition: height 0.3s ease-in-out;
+            height: 45vh; /* Default Open Height */
+            display: flex; flex-direction: column;
+        }
+        
+        /* Minimized State */
+        .dashboard.minimized { height: 60px; } 
+
+        .drag-handle {
+            width: 100%; height: 30px; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; background: #f8f9fa; border-top-left-radius: 20px; border-top-right-radius: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .handle-bar { width: 50px; height: 5px; background: #ccc; border-radius: 5px; }
+
+        .tabs { display: flex; border-bottom: 1px solid #eee; }
+        .tab { flex: 1; padding: 15px; text-align: center; font-weight: bold; color: #777; cursor: pointer; }
         .tab.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
 
-        .content-area { flex: 1; overflow-y: auto; padding: 15px; }
+        .content-area { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 40px; }
         .hidden { display: none; }
 
-        input, select, textarea { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        /* INPUTS & LOGOS */
+        .row { display: flex; gap: 10px; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+        .btn-main { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
         
-        .status-badge { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        /* Message Board */
+        .msg-bubble { background: #e3f2fd; padding: 10px; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid var(--primary); }
+        .msg-meta { font-size: 0.75rem; color: #555; margin-bottom: 4px; display: block; }
+
+        /* Custom Map Pin */
+        .pin-label { 
+            background: white; padding: 2px 5px; border-radius: 4px; border: 1px solid black; 
+            font-weight: bold; font-size: 10px; white-space: nowrap; position: absolute; top: -15px; left: -10px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="map-controls">
-        <button class="ctrl-btn" onclick="toggleLayer()">🗺️ Sat/Map</button>
-        <button class="ctrl-btn" onclick="zoomToMe()">📍 Center</button>
-        <button class="ctrl-btn" id="wakeBtn" onclick="toggleWakeLock()">💤 Keep Awake</button>
+    <div class="controls-container">
+        <button class="float-btn" onclick="toggleSat()" title="Satellite Toggle">🛰️</button>
+        <button class="float-btn" onclick="zoomToMe()" title="Center On Me">📍</button>
     </div>
 
     <div id="map"></div>
 
-    <div class="dashboard">
-        <div class="tabs">
-            <div id="tab-status" class="tab active" onclick="showTab('status')">STATUS</div>
-            <div id="tab-board" class="tab" onclick="showTab('board')">MESSAGES</div>
+    <div class="dashboard" id="dashboardPanel">
+        <div class="drag-handle" onclick="toggleDash()">
+            <div class="handle-bar"></div>
         </div>
 
-        <div id="status-tab" class="content-area">
-            <input type="text" id="username" placeholder="Unit Name / ID">
+        <div class="tabs">
+            <div id="tab-status" class="tab active" onclick="switchTab('status')">MY STATUS</div>
+            <div id="tab-msgs" class="tab" onclick="switchTab('msgs')">MESSAGES</div>
+        </div>
+
+        <div id="content-status" class="content-area">
+            <div class="row">
+                <input type="text" id="username" placeholder="Name (e.g. Unit 1)">
+                <select id="userIcon" style="width: 80px;">
+                    <option value="🚙">🚙</option> <option value="👮">👮</option> <option value="👷">👷</option> <option value="🚑">🚑</option> <option value="🛑">🛑</option> </select>
+            </div>
+            
             <select id="userColor">
                 <option value="#2563eb">Blue (Standard)</option>
                 <option value="#dc2626">Red (Emergency)</option>
-                <option value="#16a34a">Green (Safe/Clear)</option>
-                <option value="#f59e0b">Orange (Caution)</option>
+                <option value="#16a34a">Green (Clear)</option>
+                <option value="#f59e0b">Orange (Busy)</option>
             </select>
-            <select id="userStatus">
-                <option value="Active">Status: Active</option>
-                <option value="En-Route">Status: En-Route</option>
-                <option value="On-Site">Status: On-Site</option>
-                <option value="Offline">Status: Offline</option>
-            </select>
-            <button class="btn" onclick="startTracking()">START TRACKING (AUTO)</button>
-            <p style="text-align:center; font-size:0.8rem; color:#666; margin-top:5px;">Updates location every 15s</p>
+            
+            <button class="btn-main" onclick="goOnline()">GO ONLINE (GPS)</button>
+            <p id="gps-status" style="text-align: center; color: #666; font-size: 12px; margin-top: 10px;">Status: Offline</p>
         </div>
 
-        <div id="board-tab" class="content-area hidden">
-            <textarea id="boardInput" placeholder="New update..."></textarea>
-            <button class="btn" style="background: #34a853;" onclick="postMessage()">POST</button>
-            <div id="messageList" style="margin-top: 15px;"></div>
+        <div id="content-msgs" class="content-area hidden">
+            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                <input type="text" id="msgInput" placeholder="Update the team..." style="margin:0;">
+                <button onclick="sendMsg()" style="width: 60px; background: var(--accent); color: white; border: none; border-radius: 8px;">➤</button>
+            </div>
+            <div id="msgList"></div>
         </div>
     </div>
 
@@ -84,7 +120,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // --- CONFIG ---
+        // --- 1. FIREBASE CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
             authDomain: "sca-tak.firebaseapp.com",
@@ -97,132 +133,155 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- MAP LAYERS ---
-        const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles &copy; Esri'
-        });
-
-        // Setup Map (Calvert Focus)
+        // --- 2. MAP SETUP (Scientists' Cliffs Focus) ---
+        // Coordinates for SCA
+        const scaCenter = [38.514, -76.516]; 
+        
         const map = L.map('map', {
-            layers: [streets], // Default layer
-            zoomControl: false // Hide default zoom buttons for mobile space
-        }).setView([38.548, -76.584], 11);
+            zoomControl: false // We made custom buttons
+        }).setView(scaCenter, 15); // Zoom 15 is good for neighborhoods
 
-        let currentLayer = "streets";
-        function toggleLayer() {
-            if (currentLayer === "streets") {
-                map.removeLayer(streets);
-                map.addLayer(satellite);
-                currentLayer = "satellite";
+        // Layers
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        streetLayer.addTo(map); // Default
+
+        // --- 3. DASHBOARD LOGIC ---
+        function toggleDash() {
+            document.getElementById('dashboardPanel').classList.toggle('minimized');
+        }
+
+        function switchTab(tab) {
+            document.getElementById('content-status').classList.add('hidden');
+            document.getElementById('content-msgs').classList.add('hidden');
+            document.getElementById('content-' + tab).classList.remove('hidden');
+            
+            document.getElementById('tab-status').classList.remove('active');
+            document.getElementById('tab-msgs').classList.remove('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        // --- 4. GPS & TRACKING ---
+        function goOnline() {
+            const name = document.getElementById('username').value;
+            if(!name) return alert("Please enter your Unit Name first!");
+
+            // Minimize dashboard so they can see map
+            document.getElementById('dashboardPanel').classList.add('minimized');
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    (pos) => {
+                        // Success
+                        updateCloud(pos.coords.latitude, pos.coords.longitude);
+                        document.getElementById('gps-status').innerText = "🟢 GPS Active - Tracking Enabled";
+                        document.getElementById('gps-status').style.color = "green";
+                        
+                        // Center map on user once initially
+                        if(!window.centeredOnce) {
+                            map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                            window.centeredOnce = true;
+                        }
+                    },
+                    (err) => {
+                        // Error Handling
+                        alert("GPS Error: " + err.message + ". Check your phone Settings > Privacy > Location Services.");
+                        document.getElementById('gps-status').innerText = "🔴 GPS Denied";
+                    },
+                    { enableHighAccuracy: true, maximumAge: 10000 }
+                );
             } else {
-                map.removeLayer(satellite);
-                map.addLayer(streets);
-                currentLayer = "streets";
+                alert("Your device does not support GPS.");
             }
         }
 
-        // --- AUTOMATED TRACKING ---
-        let watchID = null;
-        let wakeLock = null;
-
-        function startTracking() {
+        function updateCloud(lat, lng) {
             const name = document.getElementById('username').value;
-            if(!name) return alert("Enter Unit Name First");
+            const icon = document.getElementById('userIcon').value;
+            const color = document.getElementById('userColor').value;
 
-            if(watchID) navigator.geolocation.clearWatch(watchID);
-
-            // Auto-update every time phone moves
-            watchID = navigator.geolocation.watchPosition((pos) => {
-                const data = {
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude,
-                    color: document.getElementById('userColor').value,
-                    status: document.getElementById('userStatus').value,
-                    time: new Date().toLocaleTimeString(),
-                    accuracy: pos.coords.accuracy
-                };
-
-                // Push to Cloud
-                db.ref('employees/' + name).update(data);
-                
-                // Visual Confirmation
-                document.querySelector('.btn').innerText = "TRACKING ACTIVE (✅)";
-                document.querySelector('.btn').style.background = "#16a34a";
-            }, (err) => {
-                alert("GPS Error: " + err.message);
-            }, {
-                enableHighAccuracy: true,
-                maximumAge: 10000,
-                timeout: 5000
+            db.ref('units/' + name).set({
+                lat: lat,
+                lng: lng,
+                icon: icon,
+                color: color,
+                lastSeen: Date.now()
             });
         }
 
-        // --- WAKE LOCK (PREVENT SLEEP) ---
-        async function toggleWakeLock() {
-            if ('wakeLock' in navigator) {
-                try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    document.getElementById('wakeBtn').classList.add('active');
-                    document.getElementById('wakeBtn').innerText = "⚡ Awake On";
-                } catch (err) {
-                    alert("Battery Saver Mode might be blocking this.");
-                }
-            } else {
-                alert("Your browser doesn't support Wake Lock.");
-            }
-        }
+        // --- 5. RENDER TEAM ---
+        let markers = {};
+        db.ref('units/').on('value', (snapshot) => {
+            const units = snapshot.val();
+            if(!units) return;
 
-        // --- RENDER TEAM ---
-        let userMarkers = {};
-        db.ref('employees/').on('value', (snapshot) => {
-            const data = snapshot.val();
-            if(!data) return;
-            for (let id in data) {
-                renderMarker(id, data[id]);
+            for (let name in units) {
+                const u = units[name];
+                
+                // Remove old marker
+                if (markers[name]) map.removeLayer(markers[name]);
+
+                // Custom HTML Icon
+                const iconHtml = `
+                    <div style="position:relative; text-align:center;">
+                        <div style="background:${u.color}; width:30px; height:30px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.3); font-size:16px;">
+                            ${u.icon}
+                        </div>
+                        <div class="pin-label">${name}</div>
+                    </div>`;
+
+                const customIcon = L.divIcon({ 
+                    html: iconHtml, 
+                    className: 'empty', // removes default leaflet box
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15] 
+                });
+
+                markers[name] = L.marker([u.lat, u.lng], {icon: customIcon}).addTo(map);
             }
         });
 
-        function renderMarker(name, data) {
-            if (userMarkers[name]) map.removeLayer(userMarkers[name]);
-            
-            // Create pulsing marker
-            const iconHtml = `<div style="
-                background:${data.color}; width:16px; height:16px; 
-                border-radius:50%; border:3px solid white; 
-                box-shadow: 0 0 10px ${data.color};"></div>`;
-                
-            const customIcon = L.divIcon({ html: iconHtml, className: 'custom-pin', iconSize: [20, 20] });
-            
-            userMarkers[name] = L.marker([data.lat, data.lng], {icon: customIcon}).addTo(map)
-                .bindPopup(`<b>${name}</b><br>${data.status}<br><small>${data.time}</small>`);
+        // --- 6. MESSAGING (SAVED) ---
+        function sendMsg() {
+            const txt = document.getElementById('msgInput').value;
+            const name = document.getElementById('username').value || "Anon";
+            if(!txt) return;
+
+            db.ref('messages/').push({
+                user: name,
+                text: txt,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            document.getElementById('msgInput').value = "";
         }
 
-        // --- UI UTILS ---
-        function showTab(tab) {
-            document.querySelectorAll('.content-area').forEach(el => el.classList.add('hidden'));
-            document.getElementById(tab+'-tab').classList.remove('hidden');
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-'+tab).classList.add('active');
+        // Load Last 20 Messages
+        db.ref('messages/').limitToLast(20).on('child_added', (snap) => {
+            const m = snap.val();
+            const div = document.createElement('div');
+            div.className = "msg-bubble";
+            div.innerHTML = `<span class="msg-meta">${m.user} • ${m.time}</span>${m.text}`;
+            
+            const list = document.getElementById('msgList');
+            list.insertBefore(div, list.firstChild);
+        });
+
+        // --- 7. BUTTON TOOLS ---
+        function toggleSat() {
+            if (map.hasLayer(satLayer)) {
+                map.removeLayer(satLayer);
+                map.addLayer(streetLayer);
+            } else {
+                map.removeLayer(streetLayer);
+                map.addLayer(satLayer);
+            }
         }
+
         function zoomToMe() {
             navigator.geolocation.getCurrentPosition(pos => {
-                map.setView([pos.coords.latitude, pos.coords.longitude], 15);
-            });
+                map.setView([pos.coords.latitude, pos.coords.longitude], 17);
+            }, () => alert("GPS not found yet. Click 'Go Online' first."));
         }
-        
-        // Message Board Logic (Simplified)
-        function postMessage() {
-            const text = document.getElementById('boardInput').value;
-            const user = document.getElementById('username').value || 'Unknown';
-            if(text) db.ref('messages/').push({user, text, time: new Date().toLocaleTimeString()});
-            document.getElementById('boardInput').value = "";
-        }
-        db.ref('messages/').limitToLast(10).on('child_added', s => {
-            const m = s.val();
-            document.getElementById('messageList').innerHTML = `<div style="background:#eee; padding:8px; margin-bottom:5px; border-radius:5px;"><b>${m.user}:</b> ${m.text}</div>` + document.getElementById('messageList').innerHTML;
-        });
-
     </script>
 </body>
 </html>
