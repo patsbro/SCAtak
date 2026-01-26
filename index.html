@@ -3,324 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>SCAtak | Tactical</title>
+    <title>SCA Workforce</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        :root { 
-            --bg-dark: #121212; --panel-dark: #1e1e1e; --border: #333; 
-            --accent: #0ea5e9; --text-main: #e2e8f0; --text-muted: #94a3b8;
-        }
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; height: 100vh; background: var(--bg-dark); color: var(--text-main); }
+        /* DARK WORKFORCE THEME */
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #38bdf8; --border: #334155; --text: #f1f5f9; --danger: #ef4444; --success: #22c55e; }
         
-        /* FULLSCREEN MAP */
-        #map { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 60px); z-index: 1; }
+        body { margin: 0; padding: 0; background: #000; height: 100dvh; display: flex; justify-content: center; font-family: 'Inter', sans-serif; color: var(--text); overflow: hidden; }
 
-        /* FLOATING MAP BUTTONS (Top Right) */
-        .map-tools { position: absolute; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
-        .circle-btn { width: 45px; height: 45px; border-radius: 50%; background: rgba(30,30,30,0.9); border: 1px solid var(--border); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .circle-btn:active { transform: scale(0.95); background: var(--accent); }
-
-        /* BOTTOM NAVIGATION BAR (Fixed) */
-        .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 60px;
-            background: var(--panel-dark); border-top: 1px solid var(--border);
-            display: flex; justify-content: space-around; align-items: center;
-            z-index: 2000; padding-bottom: env(safe-area-inset-bottom);
-        }
-        .nav-btn {
-            background: none; border: none; color: var(--text-muted);
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            font-size: 10px; font-weight: 600; width: 25%; cursor: pointer;
-        }
-        .nav-btn span { font-size: 20px; }
-        .nav-btn.active { color: var(--accent); }
-
-        /* MAIN MENU OVERLAY */
-        .menu-overlay {
-            position: absolute; bottom: 60px; left: 0; width: 100%; height: 0;
-            background: rgba(30,30,30,0.98); backdrop-filter: blur(10px);
-            z-index: 1500; overflow: hidden; transition: height 0.2s ease-out;
-            border-top: 1px solid var(--accent);
-        }
-        .menu-overlay.open { height: 50vh; } /* Opens halfway up */
-        .menu-content { padding: 20px; height: 100%; overflow-y: auto; box-sizing: border-box; padding-bottom: 40px; }
-
-        /* UI ELEMENTS */
-        .input-dark { width: 100%; background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; font-size: 16px; margin-bottom: 12px; box-sizing: border-box; }
-        .action-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 8px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        .action-btn.red { background: #ef4444; }
-        .action-btn.green { background: #10b981; }
+        #app-shell { width: 100%; max-width: 550px; height: 100%; position: relative; background: var(--bg); display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
         
-        /* CHECKLIST ITEMS */
-        .task-item { display: flex; align-items: center; background: #2a2a2a; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--text-muted); }
-        .task-item.done { opacity: 0.5; text-decoration: line-through; border-left-color: var(--accent); }
-        .task-chk { width: 20px; height: 20px; margin-right: 12px; }
+        /* HEADER & ADMIN LOCK */
+        .app-header { position: absolute; top: 0; left: 0; width: 100%; height: 60px; z-index: 1000; pointer-events: none; display: flex; justify-content: space-between; padding: 10px; box-sizing: border-box; }
+        .admin-lock { pointer-events: auto; opacity: 0.3; font-size: 18px; cursor: pointer; padding: 10px; }
+        .admin-lock.unlocked { opacity: 1; color: var(--success); }
 
-        /* CHAT BUBBLES */
-        .msg-bubble { padding: 8px 12px; border-radius: 12px; font-size: 14px; margin-bottom: 8px; max-width: 85%; }
-        .msg-mine { align-self: flex-end; background: var(--accent); color: white; margin-left: auto; }
-        .msg-theirs { align-self: flex-start; background: #333; color: white; }
+        /* MAP */
+        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 
-        /* MARKER STYLES */
-        .tac-marker { width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px currentColor; background: currentColor; }
-        .tac-label { 
-            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 2px 6px; 
-            border-radius: 4px; font-size: 10px; font-family: 'Roboto Mono', monospace; 
-            white-space: nowrap; pointer-events: none; border: 1px solid #555;
+        /* BOTTOM SHEET */
+        .sheet {
+            position: absolute; bottom: 70px; left: 10px; right: 10px;
+            background: rgba(30,41,59, 0.98); backdrop-filter: blur(12px);
+            border-radius: 16px; border: 1px solid var(--border);
+            height: 0; transition: height 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow: hidden; z-index: 20; display: flex; flex-direction: column;
         }
+        .sheet.open { height: 65%; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+        
+        .sheet-header { padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); }
+        .sheet-title { font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); }
+        .sheet-content { padding: 20px; overflow-y: auto; flex: 1; }
 
-        /* UTILS */
-        .hidden { display: none !important; }
-        h3 { margin: 0 0 15px 0; font-size: 16px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid #444; padding-bottom: 5px; }
+        /* NAV BAR */
+        .nav-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 70px; background: #0f172a; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 30; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { background: none; border: none; color: #64748b; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; width: 25%; }
+        .nav-item.active { color: var(--accent); }
+        .nav-icon { font-size: 20px; }
+
+        /* COMPONENTS */
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; margin-bottom: 10px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-blue { background: var(--accent); color: #0f172a; }
+        .btn-red { background: var(--danger); }
+        .btn-dark { background: #334155; }
+        
+        .input-dark { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
+
+        /* TASK LIST */
+        .task-card { background: #0f172a; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .task-card.done { opacity: 0.5; }
+        .task-card.done span { text-decoration: line-through; }
+        .chk-box { width: 24px; height: 24px; border: 2px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .chk-box.checked { background: var(--success); border-color: var(--success); }
+
+        /* ADMIN TOOLS SECTION */
+        .admin-panel { border: 1px solid var(--danger); padding: 10px; border-radius: 8px; margin-top: 20px; background: rgba(239, 68, 68, 0.1); display: none; }
+        .admin-panel.visible { display: block; }
+        
+        /* MAP ICONS */
+        .pulse-marker { width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px currentColor; background: currentColor; }
+        .note-marker { background: #fef08a; color: black; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; border: 1px solid black; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <div class="map-tools">
-        <div class="circle-btn" onclick="toggleSat()">🛰️</div>
-        <div class="circle-btn" onclick="centerMap()">🎯</div>
+<div id="app-shell">
+    
+    <div class="app-header">
+        <div class="admin-lock" id="adminLock" onclick="unlockAdmin()">🔒</div>
     </div>
 
     <div id="map"></div>
 
-    <div id="mainMenu" class="menu-overlay">
+    <div id="sheet" class="sheet">
+        <div class="sheet-header">
+            <div id="sheetTitle" class="sheet-title">Menu</div>
+            <div style="font-size:24px; cursor:pointer;" onclick="closeSheet()">×</div>
+        </div>
         
-        <div id="view-status" class="menu-content hidden">
-            <h3>Identity & Role</h3>
-            <input type="text" id="username" class="input-dark" placeholder="Unit ID (e.g. SCA-1)">
-            
+        <div id="view-status" class="sheet-content hidden">
+            <input type="text" id="username" class="input-dark" placeholder="Name / Unit ID">
             <select id="roleSelect" class="input-dark">
-                <option value="blue">🔵 Employee (Blue)</option>
-                <option value="red">🔴 Supervisor (Red)</option>
-                <option value="green">🟢 Admin (Green)</option>
-                <option value="white">⚪ Volunteer (White)</option>
+                <option value="blue">🔵 Employee</option>
+                <option value="green">🟢 Admin / Manager</option>
+                <option value="white">⚪ Volunteer</option>
             </select>
-
-            <button id="gpsBtn" class="action-btn" onclick="goOnline()">📡 GO ONLINE</button>
-            <div id="statusText" style="text-align: center; font-size: 12px; color: #666; margin-top: 10px;">Offline</div>
-        </div>
-
-        <div id="view-chat" class="menu-content hidden">
-            <h3>Comm Channel</h3>
-            <div id="chatList" style="height: 25vh; overflow-y: auto; display: flex; flex-direction: column-reverse; margin-bottom: 10px;"></div>
-            <div style="display: flex; gap: 8px;">
-                <input type="text" id="chatInput" class="input-dark" style="margin:0" placeholder="Message...">
-                <button onclick="sendMsg()" class="action-btn" style="width: 60px; margin:0;">➤</button>
+            <button class="btn btn-blue" onclick="goOnline()">📡 GO ONLINE</button>
+            
+            <div id="adminControls" class="admin-panel">
+                <div style="color:var(--danger); font-weight:bold; margin-bottom:10px; text-align:center;">⚠️ MANAGER TOOLS</div>
+                <button class="btn btn-red" onclick="clearMap()">🗑️ CLEAR ALL MAP MARKS</button>
+                <button class="btn btn-red" onclick="clearChat()">🔥 NUKE CHAT HISTORY</button>
             </div>
         </div>
 
-        <div id="view-tasks" class="menu-content hidden">
-            <h3>Community Checklist</h3>
-            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                <input type="text" id="taskInput" class="input-dark" style="margin:0" placeholder="New Task...">
-                <button onclick="addTask()" class="action-btn" style="width: 50px; margin:0;">+</button>
+        <div id="view-work" class="sheet-content hidden">
+            <div id="managerTaskInput" style="display:none; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
+                <input type="text" id="newTaskInput" class="input-dark" placeholder="Assign new work...">
+                <button class="btn btn-blue" onclick="addTask()">+ ASSIGN TASK</button>
             </div>
+
             <div id="taskList"></div>
+            <div style="text-align:center; color:#666; font-size:12px; margin-top:20px;">Only Managers can assign work.</div>
         </div>
 
-        <div id="view-time" class="menu-content hidden">
-            <h3>Time Card</h3>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <div style="font-size: 32px; font-weight: bold; font-family: 'Roboto Mono'; color: white;" id="clockDisplay">00:00</div>
-                <div style="color: #888; font-size: 12px;">CURRENT TIME</div>
+        <div id="view-mark" class="sheet-content hidden">
+            <div style="color:#94a3b8; font-size:13px; margin-bottom:15px; text-align:center;">
+                Drop a note at your current location for the team.
             </div>
-            <button class="action-btn green" onclick="logTime('Clock In')">🕒 CLOCK IN</button>
-            <button class="action-btn red" onclick="logTime('Clock Out')">🛑 CLOCK OUT</button>
-            <div id="lastPunch" style="text-align: center; margin-top: 15px; font-size: 12px; color: #aaa;"></div>
+            <input type="text" id="noteInput" class="input-dark" placeholder="e.g., 'Broken Pipe' or 'Staging Area'">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn btn-dark" onclick="dropNote('⚠️')">⚠️ HAZARD</button>
+                <button class="btn btn-dark" onclick="dropNote('🛠️')">🛠️ REPAIR</button>
+                <button class="btn btn-dark" onclick="dropNote('🚫')">🚫 BLOCKED</button>
+                <button class="btn btn-dark" onclick="dropNote('📍')">📍 NOTE</button>
+            </div>
         </div>
 
+        <div id="view-chat" class="sheet-content hidden">
+            <div id="chatList" style="height: 250px; overflow-y: auto; display: flex; flex-direction: column-reverse; margin-bottom: 15px;"></div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chatInput" class="input-dark" style="margin:0" placeholder="Team message...">
+                <button onclick="sendMsg()" class="btn btn-blue" style="width: auto; margin:0;">Send</button>
+            </div>
+        </div>
     </div>
 
-    <div class="bottom-nav">
-        <button class="nav-btn active" onclick="openMenu('status')">
-            <span>👤</span> STATUS
-        </button>
-        <button class="nav-btn" onclick="openMenu('chat')">
-            <span>💬</span> CHAT
-        </button>
-        <button class="nav-btn" onclick="openMenu('tasks')">
-            <span>📋</span> TASKS
-        </button>
-        <button class="nav-btn" onclick="openMenu('time')">
-            <span>⏱️</span> TIME
-        </button>
+    <div class="nav-bar">
+        <button class="nav-item active" onclick="openTab('status')"><span class="nav-icon">👤</span>ID</button>
+        <button class="nav-item" onclick="openTab('work')"><span class="nav-icon">📋</span>WORK</button>
+        <button class="nav-item" onclick="openTab('mark')"><span class="nav-icon">✏️</span>MARK</button>
+        <button class="nav-item" onclick="openTab('chat')"><span class="nav-icon">💬</span>CHAT</button>
     </div>
+</div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    <script>
-        // --- 1. CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
-            authDomain: "sca-tak.firebaseapp.com",
-            projectId: "sca-tak",
-            storageBucket: "sca-tak.firebasestorage.app",
-            messagingSenderId: "1073161858259",
-            appId: "1:1073161858259:web:a860ae211ff3d32e1a7826",
-            databaseURL: "https://sca-tak-default-rtdb.firebaseio.com"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+<script>
+    // --- CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
+        authDomain: "sca-tak.firebaseapp.com",
+        projectId: "sca-tak",
+        storageBucket: "sca-tak.firebasestorage.app",
+        messagingSenderId: "1073161858259",
+        appId: "1:1073161858259:web:a860ae211ff3d32e1a7826",
+        databaseURL: "https://sca-tak-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-        // --- 2. MAP SETUP ---
-        const map = L.map('map', { zoomControl: false }).setView([38.514, -76.516], 15);
-        const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    // --- MAP ---
+    const map = L.map('map', { zoomControl: false }).setView([38.514, -76.516], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        let myRoleColor = "blue"; // Default Employee
+    let isAdmin = false;
 
-        // --- 3. UI LOGIC (TAK STYLE) ---
-        function openMenu(viewId) {
-            const menu = document.getElementById('mainMenu');
-            const contents = document.querySelectorAll('.menu-content');
-            const btns = document.querySelectorAll('.nav-btn');
+    // --- ADMIN LOGIC ---
+    function unlockAdmin() {
+        const pass = prompt("Enter Supervisor Password:");
+        if(pass === "SCA2026") {
+            isAdmin = true;
+            document.getElementById('adminLock').classList.add('unlocked');
+            document.getElementById('adminControls').classList.add('visible');
+            document.getElementById('managerTaskInput').style.display = 'block'; // Show task creator
+            alert("Supervisor Mode: UNLOCKED");
+        } else {
+            alert("Access Denied");
+        }
+    }
 
-            // 1. Hide all contents
-            contents.forEach(el => el.classList.add('hidden'));
+    function clearMap() {
+        if(confirm("Delete all map markups? This cannot be undone.")) {
+            db.ref('markups/').remove();
+        }
+    }
+
+    function clearChat() {
+        if(confirm("Delete all chat history?")) {
+            db.ref('chat/').remove();
+        }
+    }
+
+    // --- NAVIGATION ---
+    function openTab(id) {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.querySelectorAll('.sheet-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById('view-' + id).classList.remove('hidden');
+        document.getElementById('sheetTitle').innerText = id.toUpperCase();
+        document.getElementById('sheet').classList.add('open');
+    }
+    function closeSheet() { document.getElementById('sheet').classList.remove('open'); }
+    map.on('click', closeSheet);
+
+    // --- TRACKING ---
+    function goOnline() {
+        const name = document.getElementById('username').value;
+        const role = document.getElementById('roleSelect').value;
+        if(!name) return alert("Enter Name");
+        const colors = { blue: "#38bdf8", green: "#22c55e", white: "#ffffff" };
+
+        if(navigator.geolocation) {
+            navigator.geolocation.watchPosition(pos => {
+                db.ref('units/' + name).update({
+                    lat: pos.coords.latitude, lng: pos.coords.longitude,
+                    color: colors[role], role: role, lastSeen: Date.now()
+                });
+                closeSheet();
+            }, null, { enableHighAccuracy: true });
+        }
+    }
+
+    // --- RENDER UNITS ---
+    let markers = {};
+    db.ref('units/').on('value', snap => {
+        const units = snap.val();
+        if(!units) return;
+        const now = Date.now();
+        for(let name in units) {
+            const u = units[name];
+            if(now - u.lastSeen > 3600000) { if(markers[name]) map.removeLayer(markers[name]); continue; }
             
-            // 2. Show specific content
-            document.getElementById('view-' + viewId).classList.remove('hidden');
-
-            // 3. Highlight button
-            btns.forEach(b => b.classList.remove('active'));
-            // Find the button that was clicked (approximate logic for simplicity)
-            if(viewId === 'status') btns[0].classList.add('active');
-            if(viewId === 'chat') btns[1].classList.add('active');
-            if(viewId === 'tasks') btns[2].classList.add('active');
-            if(viewId === 'time') btns[3].classList.add('active');
-
-            // 4. Slide open
-            menu.classList.add('open');
+            if(markers[name]) map.removeLayer(markers[name]);
+            const html = `<div style="position:relative; color:${u.color};"><div class="pulse-marker"></div></div>`;
+            const icon = L.divIcon({ className: 'empty', html: html, iconSize: [14,14], iconAnchor: [7,7] });
+            markers[name] = L.marker([u.lat, u.lng], {icon: icon}).addTo(map).bindPopup(name);
         }
+    });
 
-        // Close menu if clicking on map
-        map.on('click', () => {
-            document.getElementById('mainMenu').classList.remove('open');
-        });
-
-        // --- 4. GPS & TRACKING ---
-        function goOnline() {
-            const name = document.getElementById('username').value;
-            const role = document.getElementById('roleSelect').value;
-            if(!name) return alert("Enter Unit ID");
-
-            // Define Color Map
-            const roleColors = { blue: "#3b82f6", red: "#ef4444", green: "#10b981", white: "#ffffff" };
-            myRoleColor = roleColors[role] || "#3b82f6";
-
-            if(navigator.geolocation) {
-                navigator.geolocation.watchPosition(pos => {
-                    db.ref('units/' + name).update({
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                        color: myRoleColor,
-                        role: role,
-                        lastSeen: Date.now()
-                    });
-                    document.getElementById('gpsBtn').innerHTML = "🟢 ONLINE";
-                    document.getElementById('statusText').innerText = "Broadcasting as " + role.toUpperCase();
-                }, err => alert("GPS Error: " + err.message), { enableHighAccuracy: true });
-                
-                // Close menu to show map
-                document.getElementById('mainMenu').classList.remove('open');
-            }
-        }
-
-        // --- 5. ACTIVE USER FILTERING ---
-        let markers = {};
-        db.ref('units/').on('value', snap => {
-            const units = snap.val();
-            if(!units) return;
-
-            const now = Date.now();
-            const ONE_HOUR = 60 * 60 * 1000; 
-
-            for(let name in units) {
-                const u = units[name];
-                
-                // FILTER: Skip if older than 1 hour
-                if (now - u.lastSeen > ONE_HOUR) {
-                    if(markers[name]) map.removeLayer(markers[name]);
-                    continue; 
-                }
-
-                if(markers[name]) map.removeLayer(markers[name]);
-
-                const html = `
-                    <div style="position:relative; color:${u.color};">
-                        <div class="tac-marker"></div>
-                        <div class="tac-label">${name}</div>
-                    </div>`;
-
-                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [20, 20], iconAnchor: [10, 10] });
-                markers[name] = L.marker([u.lat, u.lng], {icon: icon}).addTo(map);
-            }
-        });
-
-        // --- 6. COMMUNITY CHECKLIST ---
-        function addTask() {
-            const t = document.getElementById('taskInput').value;
-            if(t) { db.ref('tasks/').push({ text: t, done: false }); document.getElementById('taskInput').value = ""; }
-        }
-        db.ref('tasks/').on('value', snap => {
-            const list = document.getElementById('taskList');
-            list.innerHTML = ""; // Refresh list
-            snap.forEach(child => {
-                const task = child.val();
-                const key = child.key;
-                const div = document.createElement('div');
-                div.className = `task-item ${task.done ? 'done' : ''}`;
-                div.innerHTML = `<input type="checkbox" class="task-chk" ${task.done ? 'checked' : ''} onclick="toggleTask('${key}', ${task.done})"> ${task.text}`;
-                list.appendChild(div);
+    // --- MAP MARKUP (Shared Notes) ---
+    function dropNote(icon) {
+        const note = document.getElementById('noteInput').value || "Mark";
+        const user = document.getElementById('username').value || "Anon";
+        navigator.geolocation.getCurrentPosition(pos => {
+            db.ref('markups/').push({
+                icon: icon, note: note, user: user,
+                lat: pos.coords.latitude, lng: pos.coords.longitude
             });
+            closeSheet();
+            document.getElementById('noteInput').value = "";
         });
-        window.toggleTask = (key, currentStatus) => {
-            db.ref('tasks/' + key).update({ done: !currentStatus });
-        };
+    }
 
-        // --- 7. TIME CARD ---
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('clockDisplay').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }, 1000);
+    let noteLayers = {};
+    db.ref('markups/').on('value', snap => {
+        // Clear old notes visually (simple refresh)
+        for(let id in noteLayers) map.removeLayer(noteLayers[id]);
+        noteLayers = {};
 
-        function logTime(action) {
-            const name = document.getElementById('username').value;
-            if(!name) return alert("Enter Unit ID first");
-            
-            const timeStr = new Date().toLocaleString();
-            db.ref('timecard/' + name).push({ action: action, time: timeStr });
-            document.getElementById('lastPunch').innerText = `Last Action: ${action} at ${timeStr}`;
+        const marks = snap.val();
+        for(let id in marks) {
+            const m = marks[id];
+            const html = `<div class="note-marker">${m.icon} ${m.note}</div>`;
+            const icon = L.divIcon({ className: 'empty', html: html, iconSize: [null, null], iconAnchor: [20, 10] });
+            noteLayers[id] = L.marker([m.lat, m.lng], {icon: icon}).addTo(map);
         }
+    });
 
-        // --- 8. CHAT ---
-        function sendMsg() {
-            const text = document.getElementById('chatInput').value;
-            const user = document.getElementById('username').value || "Anon";
-            if(text) { db.ref('chat/').push({ user, text, timestamp: Date.now() }); document.getElementById('chatInput').value = ""; }
-        }
-        db.ref('chat/').limitToLast(50).on('child_added', snap => {
-            const m = snap.val();
-            const isMe = m.user === document.getElementById('username').value;
+    // --- WORK TASKS ---
+    function addTask() {
+        const txt = document.getElementById('newTaskInput').value;
+        if(txt) { db.ref('tasks/').push({ text: txt, done: false }); document.getElementById('newTaskInput').value = ""; }
+    }
+
+    db.ref('tasks/').on('value', snap => {
+        const list = document.getElementById('taskList');
+        list.innerHTML = "";
+        snap.forEach(child => {
+            const t = child.val();
             const div = document.createElement('div');
-            div.className = `msg-bubble ${isMe ? 'msg-mine' : 'msg-theirs'}`;
-            div.innerHTML = `<b>${m.user}</b>: ${m.text}`;
-            document.getElementById('chatList').prepend(div);
+            div.className = `task-card ${t.done ? 'done' : ''}`;
+            div.innerHTML = `<span>${t.text}</span> <div class="chk-box ${t.done ? 'checked' : ''}" onclick="toggleTask('${child.key}', ${t.done})">✓</div>`;
+            list.appendChild(div);
         });
+    });
 
-        // --- UTILS ---
-        function toggleSat() { map.hasLayer(sat) ? (map.removeLayer(sat), map.addLayer(street)) : (map.removeLayer(street), map.addLayer(sat)); }
-        function centerMap() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
-        // Open Status by default
-        openMenu('status');
-    </script>
+    window.toggleTask = (key, status) => { db.ref('tasks/' + key).update({ done: !status }); };
+
+    // --- CHAT ---
+    function sendMsg() {
+        const txt = document.getElementById('chatInput').value;
+        const user = document.getElementById('username').value || "Anon";
+        if(txt) { db.ref('chat/').push({ user, text: txt }); document.getElementById('chatInput').value = ""; }
+    }
+    db.ref('chat/').limitToLast(50).on('value', snap => {
+        const list = document.getElementById('chatList');
+        list.innerHTML = ""; 
+        snap.forEach(c => {
+            const m = c.val();
+            const div = document.createElement('div');
+            div.style.padding="8px"; div.style.marginBottom="5px"; div.style.background="#334155"; div.style.borderRadius="6px";
+            div.innerHTML = `<b>${m.user}:</b> ${m.text}`;
+            list.prepend(div);
+        });
+    });
+
+    // Start on Status
+    openTab('status');
+</script>
 </body>
 </html>
