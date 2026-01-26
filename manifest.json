@@ -3,9 +3,9 @@
   "name": "SCAtak",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+      "src": "https://media.istockphoto.com/id/1145618475/vector/direction-logo.jpg?s=612x612&w=0&k=20&c=Jd1tT9wQO6y-Ld_KqW_l4QjRj_d8_p_q_f_u_z_v_x_w=",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpeg"
     }
   ],
   "start_url": "index.html",
