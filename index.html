@@ -2,242 +2,248 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCAtak">
     <link rel="manifest" href="manifest.json">
-    <title>SCAtak Secured</title>
+    <title>SCAtak Ultimate</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
-        /* --- THEME --- */
-        :root { 
-            --bg: #0f172a; --panel: #1e293b; --border: #334155; 
-            --accent: #0ea5e9; --text: #f8fafc; --danger: #ef4444; --success: #10b981;
-            --nav-height: 80px; 
+        :root {
+            --glass: rgba(16, 20, 24, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #00f0ff; /* Cyber Cyan */
+            --danger: #ff2a6d; /* Neon Red */
+            --success: #05ffa1; /* Neon Green */
+            --text: #e0fbfc;
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        
+        body { 
+            margin: 0; background: #000; color: var(--text); 
+            font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; 
+            display: flex; flex-direction: column;
+        }
+
+        /* --- MAP LAYER --- */
+        #map { flex: 1; width: 100%; height: 100%; z-index: 0; background: #0b0d12; }
+        .night-vision { filter: grayscale(100%) sepia(100%) hue-rotate(-50deg) saturate(300%) contrast(1.2); }
+
+        /* --- HUD ELEMENTS --- */
+        .hud-top {
+            position: absolute; top: 0; left: 0; width: 100%; 
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            z-index: 10; padding-top: env(safe-area-inset-top); pointer-events: none;
+        }
+
+        .marquee-container {
+            background: rgba(255, 42, 109, 0.2); border-bottom: 1px solid var(--danger);
+            overflow: hidden; white-space: nowrap; height: 24px; display: flex; align-items: center;
+            pointer-events: auto;
+        }
+        .marquee-text {
+            animation: scroll 15s linear infinite; font-family: 'Rajdhani', sans-serif; 
+            font-weight: 700; color: var(--danger); font-size: 14px; text-transform: uppercase;
+            padding-left: 100%;
+        }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+        .weather-widget {
+            position: absolute; top: 35px; right: 15px; text-align: right;
+            font-family: 'Rajdhani', sans-serif; text-shadow: 0 0 5px black; pointer-events: auto;
+        }
+        .weather-temp { font-size: 28px; font-weight: 700; color: var(--accent); line-height: 1; }
+        .weather-detail { font-size: 12px; color: #aaa; font-weight: 600; }
+
+        .speed-widget {
+            position: absolute; top: 35px; left: 15px; 
+            font-family: 'Rajdhani', sans-serif; text-shadow: 0 0 5px black;
+        }
+        .speed-val { font-size: 28px; font-weight: 700; color: var(--success); line-height: 1; }
+        .speed-label { font-size: 10px; color: #aaa; letter-spacing: 1px; }
+
+        /* --- FLOATING CONTROLS (Right Side) --- */
+        .fab-container {
+            position: absolute; bottom: calc(85px + var(--safe-bottom)); right: 15px;
+            display: flex; flex-direction: column; gap: 12px; z-index: 20;
+        }
+        .fab {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: var(--glass); border: 1px solid var(--glass-border);
+            color: var(--accent); display: flex; align-items: center; justify-content: center;
+            font-size: 20px; backdrop-filter: blur(10px); cursor: pointer;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); transition: 0.2s;
+        }
+        .fab:active { transform: scale(0.9); background: var(--accent); color: black; }
+        .fab.sos { border-color: var(--danger); color: var(--danger); }
+        .fab.sos.active { background: var(--danger); color: white; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 42, 109, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 42, 109, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 42, 109, 0); } }
+
+        /* --- BOTTOM NAVIGATION (Glass) --- */
+        .nav-bar {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            height: calc(75px + var(--safe-bottom));
+            background: var(--glass); border-top: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+            display: flex; justify-content: space-around; align-items: flex-start;
+            z-index: 100; padding-top: 10px; padding-bottom: var(--safe-bottom);
         }
         
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; padding: 0; background: #000; font-family: 'Inter', sans-serif; color: var(--text); overflow: hidden; height: 100dvh; display: flex; }
+        .nav-item {
+            background: none; border: none; color: #64748b;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            font-size: 10px; font-weight: 600; width: 20%; cursor: pointer;
+        }
+        .nav-item svg { width: 24px; height: 24px; fill: currentColor; transition: 0.3s; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item.active svg { filter: drop-shadow(0 0 5px var(--accent)); transform: translateY(-3px); }
 
-        /* --- LOCK SCREEN (SECURITY) --- */
-        #lock-screen {
+        /* --- SLIDE-UP PANELS --- */
+        .panel {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 0;
+            background: #111418; z-index: 90; overflow: hidden;
+            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top-left-radius: 24px; border-top-right-radius: 24px;
+            border-top: 1px solid var(--glass-border);
+            padding-bottom: calc(80px + var(--safe-bottom)); /* Clear nav */
+        }
+        .panel.open { height: 75vh; }
+        .panel-content { padding: 25px; height: 100%; overflow-y: auto; }
+        
+        h2 { margin: 0 0 20px 0; font-family: 'Rajdhani'; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        /* UI COMPONENTS */
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: 700; margin-bottom: 12px; font-size: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; font-family: 'Rajdhani'; }
+        .btn-cyan { background: rgba(0, 240, 255, 0.15); border: 1px solid var(--accent); color: var(--accent); }
+        .btn-red { background: rgba(255, 42, 109, 0.15); border: 1px solid var(--danger); color: var(--danger); }
+        .btn-green { background: rgba(5, 255, 161, 0.15); border: 1px solid var(--success); color: var(--success); }
+        
+        .input-cyber {
+            width: 100%; padding: 14px; background: #000; border: 1px solid #333; 
+            color: white; border-radius: 8px; margin-bottom: 15px; font-family: 'Inter';
+        }
+        .input-cyber:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+
+        /* LIST ITEMS */
+        .list-item { background: #1a1e24; padding: 15px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #444; display: flex; justify-content: space-between; align-items: center; }
+        .list-item.done { opacity: 0.5; border-left-color: var(--success); }
+
+        /* FLASHLIGHT OVERLAY */
+        #torch-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; padding: 20px;
-        }
-        .lock-title { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: var(--accent); margin-bottom: 20px; }
-        .pin-input { font-size: 24px; letter-spacing: 5px; text-align: center; width: 200px; padding: 10px; border: 2px solid var(--accent); background: #111; color: white; border-radius: 8px; }
-
-        /* --- LAYOUT --- */
-        #map-container { flex: 1; position: relative; height: 100%; z-index: 1; }
-        #map { width: 100%; height: 100%; background: #1a1a1a; cursor: crosshair; }
-
-        /* SIDEBAR */
-        #sidebar {
-            width: 380px; height: 100%; background: var(--bg); 
-            border-right: 1px solid var(--border); display: flex; flex-direction: column;
-            z-index: 100; box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            background: white; z-index: 9999; display: none;
         }
 
-        .sidebar-header { 
-            padding: 15px 20px; border-bottom: 1px solid var(--border); 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: var(--bg); z-index: 10; flex-shrink: 0;
-        }
-        .app-title { font-weight: 800; color: white; letter-spacing: 1px; font-size: 18px; }
-        .status-dot { width: 10px; height: 10px; background: #333; border-radius: 50%; }
-        .status-dot.live { background: var(--success); box-shadow: 0 0 10px var(--success); }
-
-        /* TABS */
-        .tab-content { flex: 1; overflow-y: auto; padding: 20px; display: none; }
-        .tab-content.active { display: block; }
-
-        /* MOBILE OVERRIDES */
-        @media (max-width: 768px) {
-            body { flex-direction: column-reverse; } 
-            #sidebar {
-                position: absolute; bottom: 0; left: 0; width: 100%; height: 0; 
-                border-right: none; border-top: 1px solid var(--border);
-                transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-                overflow: hidden; z-index: 300;
-                padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
-            }
-            #sidebar.open { height: 75vh; border-radius: 20px 20px 0 0; }
-            
-            #mobile-nav {
-                height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
-                background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
-                border-top: 1px solid var(--border); 
-                display: flex; z-index: 400; width: 100%;
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-            
-            /* FORCE CONTROLS TO BOTTOM RIGHT */
-            .map-controls-group {
-                bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 15px) !important;
-                right: 15px !important; top: auto !important;
-            }
-        }
-        @media (min-width: 769px) { #mobile-nav { display: none; } }
-
-        /* BUTTONS */
-        .mn-btn { 
-            flex: 1; background: none; border: none; color: #64748b; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            gap: 4px; font-size: 10px; font-weight: 700; cursor: pointer; height: 100%; position: relative;
-        }
-        .mn-btn svg { width: 24px; height: 24px; fill: currentColor; }
-        .mn-btn.active { color: var(--accent); }
-        .badge { position: absolute; top: 10px; right: 25px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: none; }
-
-        /* FORMS */
-        .input-box { width: 100%; padding: 14px; background: var(--panel); border: 1px solid var(--border); color: white; border-radius: 8px; font-size: 16px; margin-bottom: 10px; -webkit-appearance: none; }
-        .btn { width: 100%; padding: 14px; border-radius: 8px; border: none; font-weight: 700; font-size: 14px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;}
-        .btn-primary { background: var(--accent); color: #0f172a; }
-        .btn-danger { background: var(--danger); }
-        .btn-dark { background: #334155; }
-        .btn-tool { background: var(--panel); border: 1px solid var(--border); flex-direction: column; height: 80px; }
-        .btn-tool.active { border-color: var(--success); background: rgba(16, 185, 129, 0.1); color: var(--success); }
-
-        /* MAP ELEMENTS */
-        .map-controls-group {
-            position: absolute; top: 20px; right: 20px; z-index: 400; 
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        .map-btn {
-            width: 48px; height: 48px; border-radius: 12px; 
-            border: 1px solid rgba(255,255,255,0.1); background: #1e293b; 
-            color: white; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
-
-        /* CUSTOM MODAL */
-        #custom-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); z-index: 2000; display: none;
-            align-items: center; justify-content: center; backdrop-filter: blur(5px);
-        }
-        .modal-content {
-            background: var(--bg); border: 1px solid var(--border); padding: 25px; 
-            border-radius: 16px; width: 90%; max-width: 350px; text-align: center;
-        }
-
-        /* USER DOTS */
-        .user-dot-label { 
-            background: rgba(0,0,0,0.7); color: white; padding: 2px 5px; 
-            border-radius: 4px; font-size: 10px; white-space: nowrap; font-weight: bold;
-            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-        }
     </style>
 </head>
 <body>
 
-    <div id="lock-screen">
-        <div class="lock-title">SCAtak SECURE</div>
-        <input type="password" id="pinInput" class="pin-input" placeholder="CODE" maxlength="7">
-        <div style="color: #666; margin-top: 20px; font-size: 12px;">AUTHORIZED PERSONNEL ONLY</div>
-    </div>
+    <div id="torch-overlay" onclick="toggleTorch()"></div>
 
-    <div id="custom-modal">
-        <div class="modal-content">
-            <div style="font-size:16px; font-weight:bold; margin-bottom:15px; color:var(--accent);">ADD MAP NOTE</div>
-            <input type="text" id="modalInput" class="input-box" placeholder="Description...">
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-dark" style="flex:1;" onclick="closeModal()">CANCEL</button>
-                <button class="btn btn-primary" style="flex:1;" onclick="confirmNote()">SAVE</button>
-            </div>
+    <div class="hud-top">
+        <div class="marquee-container" id="marqueeBox" style="display:none;">
+            <div class="marquee-text" id="marqueeText">⚠️ SEVERE WEATHER WARNING IN EFFECT FOR CALVERT COUNTY ⚠️</div>
+        </div>
+        
+        <div class="speed-widget">
+            <div class="speed-val" id="speedVal">0</div>
+            <div class="speed-label">MPH <span id="compassVal">N</span></div>
+        </div>
+
+        <div class="weather-widget">
+            <div class="weather-temp" id="weatherTemp">--°</div>
+            <div class="weather-detail" id="weatherWind">-- mph</div>
         </div>
     </div>
 
-    <aside id="sidebar">
-        <div class="sidebar-header">
-            <div class="app-title">SCAtak <span style="font-size:10px; color:#666;">v17</span></div>
-            <div id="lockIcon" onclick="toggleAdmin()" style="font-size:18px; cursor:pointer;">🔒</div>
-        </div>
+    <div id="map"></div>
 
-        <div id="tab-status" class="tab-content active">
-            <div id="admin-panel" style="display:none; padding:15px; background:rgba(239,68,68,0.1); border-radius:8px; margin-bottom:20px; border:1px solid var(--danger);">
-                <div style="font-size:11px; font-weight:900; color:var(--danger); margin-bottom:10px; letter-spacing:1px;">COMMAND TOOLS</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <button class="btn btn-danger" onclick="clearMap()">Wipe Map</button>
-                    <button class="btn btn-danger" onclick="clearUnits()">Wipe Users</button>
-                    <button class="btn btn-danger" onclick="clearTasks()">Wipe Tasks</button>
-                    <button class="btn btn-danger" onclick="clearChat()">Wipe Chat</button>
+    <div class="fab-container">
+        <div class="fab" onclick="toggleNightMode()">🌑</div>
+        <div class="fab" onclick="toggleTorch()">🔦</div>
+        <div class="fab" onclick="zoomToSCA()">🏘️</div>
+        <div class="fab" onclick="locateMe()">🎯</div>
+        <div class="fab sos" id="sosBtn" onmousedown="startSOS()" onmouseup="endSOS()" ontouchstart="startSOS()" ontouchend="endSOS()">🆘</div>
+    </div>
+
+    <div id="panel-id" class="panel">
+        <div class="panel-content">
+            <h2>Identity & Status <span id="lockIcon" onclick="toggleAdmin()">🔒</span></h2>
+            
+            <div id="admin-tools" style="display:none; margin-bottom:20px; border:1px solid var(--danger); padding:10px; border-radius:8px;">
+                <div style="color:var(--danger); font-size:10px; margin-bottom:10px;">COMMAND OVERRIDE</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <button class="btn btn-red" onclick="nuke('markups')">WIPE MAP</button>
+                    <button class="btn btn-red" onclick="nuke('units')">WIPE USERS</button>
+                    <button class="btn btn-red" onclick="exportData()">EXPORT DATA</button>
+                    <button class="btn btn-red" onclick="setAlert()">SET ALERT</button>
                 </div>
             </div>
 
-            <div style="margin-bottom:20px;">
-                <input type="text" id="username" class="input-box" placeholder="Unit Name / ID" onchange="saveSettings()">
-                <select id="roleSelect" class="input-box" onchange="saveSettings()">
-                    <option value="blue">🔵 Employee</option>
-                    <option value="red">🔴 Supervisor</option>
-                    <option value="green">🟢 Admin</option>
-                    <option value="white">⚪ Volunteer</option>
-                </select>
-                <button class="btn btn-primary" id="trackBtn" onclick="toggleTracking()">GO LIVE</button>
-                <div id="gps-status" style="text-align:center; font-size:12px; color:#666;">Offline</div>
-            </div>
+            <input type="text" id="username" class="input-cyber" placeholder="UNIT CALLSIGN">
+            <select id="roleSelect" class="input-cyber">
+                <option value="blue">🔵 EMPLOYEE</option>
+                <option value="red">🔴 SUPERVISOR</option>
+                <option value="green">🟢 ADMIN</option>
+                <option value="white">⚪ VOLUNTEER</option>
+            </select>
+            <button id="trackBtn" class="btn btn-cyan" onclick="toggleTracking()">ACTIVATE BEACON</button>
+            <div style="text-align:center; font-size:11px; color:#555; margin-top:10px;">SECURE CONNECTION: ENCRYPTED</div>
         </div>
+    </div>
 
-        <div id="tab-nav" class="tab-content">
-            <div style="color:#aaa; font-size:13px; margin-bottom:10px;">ENTER ADDRESS (e.g. "Aspen")</div>
+    <div id="panel-assets" class="panel">
+        <div class="panel-content">
+            <h2>Asset Locker <button style="background:none; border:none; color:var(--success);" onclick="addAsset()">+</button></h2>
+            <div id="assetList"></div>
+        </div>
+    </div>
+
+    <div id="panel-work" class="panel">
+        <div class="panel-content">
+            <h2>Mission Log</h2>
+            <div id="taskInputWrap" style="display:none;">
+                <input type="text" id="taskInput" class="input-cyber" placeholder="NEW OBJECTIVE...">
+                <button class="btn btn-cyan" onclick="addTask()">ASSIGN</button>
+            </div>
+            <div id="taskList"></div>
+        </div>
+    </div>
+
+    <div id="panel-chat" class="panel">
+        <div class="panel-content">
+            <h2>Comms Channel</h2>
+            <div id="chatFeed" style="height:300px; overflow-y:auto; display:flex; flex-direction:column-reverse; margin-bottom:15px; border:1px solid #333; padding:10px; border-radius:8px;"></div>
             <div style="display:flex; gap:10px;">
-                <input type="text" id="navInput" class="input-box" placeholder="Street Name...">
-                <button class="btn btn-primary" style="width:auto;" onclick="findHouse()">GO</button>
-            </div>
-            <div id="navResult" style="margin-top:10px; color:var(--accent); font-weight:bold; text-align:center;"></div>
-        </div>
-
-        <div id="tab-mark" class="tab-content">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <button class="btn btn-tool" onclick="selectTool('repair')"><span>🛠️</span> REPAIR</button>
-                <button class="btn btn-tool" onclick="selectTool('hazard')"><span>⚠️</span> HAZARD</button>
-                <button class="btn btn-tool" onclick="selectTool('blocked')"><span>🚫</span> BLOCKED</button>
-                <button class="btn btn-tool" onclick="selectTool('note')"><span>📍</span> NOTE</button>
-                <button class="btn btn-tool" onclick="startMeasure()"><span>Cc</span> MEASURE</button>
-            </div>
-            <div id="measure-output" style="text-align:center; margin-top:10px; color:var(--success); font-weight:bold;"></div>
-        </div>
-
-        <div id="tab-chat" class="tab-content">
-            <div id="chat-feed" style="height:300px; overflow-y:auto; display:flex; flex-direction:column-reverse; margin-bottom:10px; background:#111; border-radius:8px; padding:10px;"></div>
-            <div style="display:flex; gap:8px;">
-                <input type="text" id="chatInput" class="input-box" style="margin:0;" placeholder="Message...">
-                <button class="btn btn-primary" style="width:auto;" onclick="sendMsg()">➤</button>
+                <input type="text" id="chatInput" class="input-cyber" style="margin:0;" placeholder="TRANSMIT...">
+                <button class="btn btn-cyan" style="width:auto;" onclick="sendMsg()">➤</button>
             </div>
         </div>
-    </aside>
+    </div>
 
-    <main id="map-container">
-        <div id="map"></div>
-        <div class="map-controls-group">
-            <div class="map-btn" onclick="toggleSat()">🛰️</div>
-            <div class="map-btn" onclick="zoomToSCA()">🏘️</div>
-            <div class="map-btn" onclick="zoomToMe()">🎯</div>
-        </div>
-    </main>
-
-    <nav id="mobile-nav">
-        <button class="mn-btn active" onclick="toggleTab('status')">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+    <nav class="nav-bar">
+        <button class="nav-item active" onclick="openPanel('id')">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             ID
         </button>
-        <button class="mn-btn" onclick="toggleTab('nav')">
-            <svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
-            NAV
+        <button class="nav-item" onclick="openPanel('assets')">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+            ASSETS
         </button>
-        <button class="mn-btn" onclick="toggleTab('mark')">
-            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            TOOLS
+        <button class="nav-item" onclick="openPanel('work')">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            OPS
         </button>
-        <button class="mn-btn" onclick="toggleTab('chat')">
-            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-            <div id="chatBadge" class="badge"></div>
-            CHAT
+        <button class="nav-item" onclick="openPanel('chat')">
+            <svg viewBox="0 0 24 24"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
+            COMMS
         </button>
     </nav>
 
@@ -246,7 +252,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // CONFIG
+        // --- CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
             authDomain: "sca-tak.firebaseapp.com",
@@ -259,263 +265,267 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-
-        // SECURITY CHECK
-        const correctPin = "SCALIFE";
-        const storedPin = localStorage.getItem("sca_auth");
-        if(storedPin === correctPin) {
-            document.getElementById('lock-screen').style.display = 'none';
-        }
-        document.getElementById('pinInput').addEventListener('keyup', (e) => {
-            if(e.target.value.toUpperCase() === correctPin) {
-                localStorage.setItem("sca_auth", correctPin);
-                document.getElementById('lock-screen').style.display = 'none';
-                loadSettings();
-            }
-        });
-
-        // LOAD SETTINGS
-        function loadSettings() {
-            if(localStorage.getItem('sca_user')) document.getElementById('username').value = localStorage.getItem('sca_user');
-            if(localStorage.getItem('sca_role')) document.getElementById('roleSelect').value = localStorage.getItem('sca_role');
-        }
-        function saveSettings() {
-            localStorage.setItem('sca_user', document.getElementById('username').value);
-            localStorage.setItem('sca_role', document.getElementById('roleSelect').value);
-        }
-
-        // MAP
-        const map = L.map('map', { zoomControl: false }).setView([38.514, -76.516], 15);
-        const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-
-        // ZONES
-        const gates = {
-            'A': [38.528, -76.516],
-            'B': [38.522, -76.514],
-            'C': [38.514, -76.516], // Community Center
-            'D': [38.508, -76.513],
-            'E': [38.502, -76.510]
+        // --- GATES CONFIG (CORRECTED) ---
+        const GATES = {
+            'A': [38.528, -76.516], // Aspen
+            'B': [38.522, -76.514], // Birch
+            'C': [38.515, -76.513], // Cedar (Main)
+            'D': [38.510, -76.512], // Dogwood
+            'E': [38.503, -76.509]  // Elder
         };
-        // Draw Zones
-        Object.keys(gates).forEach(k => {
-            L.circle(gates[k], {color: '#0ea5e9', fillOpacity:0.1, radius: 200}).addTo(map);
-            L.marker(gates[k], {icon: L.divIcon({className:'empty', html:`<div style="color:cyan; font-weight:bold;">GATE ${k}</div>`})}).addTo(map);
-        });
 
-        // TAB LOGIC
-        let currentTab = 'status';
-        function toggleTab(id) {
-            const sidebar = document.getElementById('sidebar');
-            if(sidebar.classList.contains('open') && currentTab === id) {
-                sidebar.classList.remove('open');
-                document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
+        // --- MAP INIT ---
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([38.515, -76.513], 15);
+        const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
+
+        // Draw Gates
+        for (let g in GATES) {
+            L.circle(GATES[g], { color: '#00f0ff', radius: 30, weight: 1 }).addTo(map);
+            L.marker(GATES[g], {
+                icon: L.divIcon({
+                    className: 'gate-label',
+                    html: `<div style="color:#00f0ff; font-weight:900; font-family:'Rajdhani'; font-size:14px; text-shadow:0 0 5px #00f0ff;">GATE ${g}</div>`
+                })
+            }).addTo(map);
+        }
+
+        // --- WEATHER (OpenMeteo API) ---
+        async function fetchWeather() {
+            try {
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.51&longitude=-76.51&current_weather=true&temperature_unit=fahrenheit');
+                const data = await res.json();
+                document.getElementById('weatherTemp').innerText = Math.round(data.current_weather.temperature) + "°F";
+                document.getElementById('weatherWind').innerText = data.current_weather.windspeed + " mph";
+            } catch (e) { console.log("Weather Error"); }
+        }
+        fetchWeather(); setInterval(fetchWeather, 600000); // 10 mins
+
+        // --- PANEL LOGIC ---
+        let currentPanel = null;
+        function openPanel(id) {
+            const el = document.getElementById('panel-' + id);
+            // Toggle
+            if (currentPanel === id && el.classList.contains('open')) {
+                el.classList.remove('open');
+                currentPanel = null;
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             } else {
-                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-                document.getElementById('tab-' + id).classList.add('active');
-                document.querySelectorAll('.mn-btn').forEach(b => b.classList.remove('active'));
-                // Highlight button
-                const idxMap = { 'status': 0, 'nav': 1, 'mark': 2, 'chat': 3 };
-                document.querySelectorAll('.mn-btn')[idxMap[id]].classList.add('active');
-                sidebar.classList.add('open');
-                currentTab = id;
+                // Close others
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
                 
-                if(id === 'chat') document.getElementById('chatBadge').style.display = 'none';
+                // Open new
+                el.classList.add('open');
+                // Highlight Nav
+                const idx = ['id','assets','work','chat'].indexOf(id);
+                document.querySelectorAll('.nav-item')[idx].classList.add('active');
+                currentPanel = id;
             }
         }
 
-        // NAVIGATION LOGIC
-        let navLine = null;
-        function findHouse() {
-            const val = document.getElementById('navInput').value.trim().toUpperCase();
-            if(!val) return;
-            const firstLetter = val.charAt(0);
-            
-            if(gates[firstLetter]) {
-                const target = gates[firstLetter];
-                map.setView(target, 17);
-                document.getElementById('navResult').innerText = `ROUTING TO GATE ${firstLetter} ZONE`;
-                
-                // Draw line from center to gate
-                if(navLine) map.removeLayer(navLine);
-                navLine = L.polyline([map.getCenter(), target], {color: 'yellow', dashArray: '10, 10'}).addTo(map);
-                
-                // Close menu
-                document.getElementById('sidebar').classList.remove('open');
-            } else {
-                document.getElementById('navResult').innerText = "UNKNOWN STREET - TRY A, B, C, D, E";
-            }
+        // --- SOS LOGIC ---
+        let sosTimer;
+        function startSOS() {
+            document.getElementById('sosBtn').classList.add('active');
+            sosTimer = setTimeout(() => {
+                const name = document.getElementById('username').value || "UNKNOWN";
+                db.ref('alerts/').push({ type: 'SOS', user: name, time: Date.now() });
+                navigator.vibrate([500, 200, 500]); // Vibrate
+                alert("SOS SIGNAL SENT");
+            }, 2000); // Hold for 2 seconds
+        }
+        function endSOS() {
+            clearTimeout(sosTimer);
+            document.getElementById('sosBtn').classList.remove('active');
         }
 
-        // TOOL LOGIC
-        let activeTool = null;
-        let measurePoints = [];
-        
-        function selectTool(type) {
-            activeTool = type;
-            measurePoints = []; // reset measure
-            document.getElementById('sidebar').classList.remove('open');
-            alert("Tap map to place " + type.toUpperCase());
-        }
-
-        function startMeasure() {
-            activeTool = 'measure';
-            measurePoints = [];
-            document.getElementById('sidebar').classList.remove('open');
-            alert("Tap 2 points to measure");
-        }
-
-        map.on('click', (e) => {
-            if(activeTool === 'measure') {
-                L.marker(e.latlng).addTo(map);
-                measurePoints.push(e.latlng);
-                if(measurePoints.length === 2) {
-                    const dist = map.distance(measurePoints[0], measurePoints[1]);
-                    alert("Distance: " + Math.round(dist) + " meters (" + Math.round(dist*3.28) + " ft)");
-                    measurePoints = [];
-                    activeTool = null;
-                }
-            } else if (activeTool) {
-                // Open modal for note
-                pendingClick = e;
-                document.getElementById('custom-modal').style.display = 'flex';
-                document.getElementById('modalInput').focus();
+        // --- ALERTS LISTENER ---
+        db.ref('alerts/').limitToLast(1).on('child_added', snap => {
+            const val = snap.val();
+            if (Date.now() - val.time < 10000) { // If new
+                document.getElementById('marqueeBox').style.display = 'flex';
+                document.getElementById('marqueeText').innerText = `⚠️ SOS SIGNAL: ${val.user} ⚠️`;
+                setTimeout(() => document.getElementById('marqueeBox').style.display = 'none', 30000);
             }
         });
 
-        // MODAL
-        let pendingClick = null;
-        function closeModal() { document.getElementById('custom-modal').style.display = 'none'; activeTool = null; }
-        function confirmNote() {
-            const note = document.getElementById('modalInput').value || activeTool.toUpperCase();
-            const user = document.getElementById('username').value || "Anon";
-            db.ref('markups/').push({
-                type: activeTool, note: note, user: user,
-                lat: pendingClick.latlng.lat, lng: pendingClick.latlng.lng
-            });
-            closeModal();
-        }
-
-        // TRACKING & BATTERY
+        // --- TRACKING & SPEEDOMETER ---
         let trackId = null;
+        let pathLine = null;
+        let pathCoords = [];
+
         function toggleTracking() {
-            if(trackId) {
+            if (trackId) {
                 navigator.geolocation.clearWatch(trackId);
                 trackId = null;
-                document.getElementById('trackBtn').innerText = "GO LIVE";
-                document.getElementById('gps-status').innerText = "Offline";
-                db.ref('units/' + document.getElementById('username').value).remove(); // Remove dot on stop
+                document.getElementById('trackBtn').innerText = "ACTIVATE BEACON";
+                document.getElementById('trackBtn').classList.remove('btn-green');
+                document.getElementById('trackBtn').classList.add('btn-cyan');
+                if(pathLine) map.removeLayer(pathLine);
             } else {
                 const name = document.getElementById('username').value;
-                if(!name) return alert("Enter Name");
-                const role = document.getElementById('roleSelect').value;
-                const colors = { blue: "#38bdf8", red: "#ef4444", green: "#10b981", white: "#ffffff" };
+                if(!name) return alert("ENTER CALLSIGN");
                 
-                // Battery
-                let battLevel = "100%";
-                if(navigator.getBattery) {
-                    navigator.getBattery().then(b => { battLevel = Math.round(b.level * 100) + "%"; });
-                }
+                const role = document.getElementById('roleSelect').value;
+                const colors = { blue: "#00f0ff", red: "#ff2a6d", green: "#05ffa1", white: "#ffffff" };
+                pathCoords = []; // Reset trail
 
                 trackId = navigator.geolocation.watchPosition(pos => {
+                    const { latitude, longitude, speed, heading } = pos.coords;
+                    
+                    // Update Speedometer
+                    const mph = speed ? Math.round(speed * 2.237) : 0;
+                    document.getElementById('speedVal').innerText = mph;
+                    
+                    // Update Compass
+                    if(heading) {
+                        const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+                        const dir = dirs[Math.round(heading / 45) % 8];
+                        document.getElementById('compassVal').innerText = dir;
+                    }
+
+                    // Update DB
                     db.ref('units/' + name).update({
-                        lat: pos.coords.latitude, lng: pos.coords.longitude,
-                        color: colors[role], role: role, batt: battLevel,
-                        lastSeen: Date.now()
+                        lat: latitude, lng: longitude,
+                        color: colors[role], role: role,
+                        speed: mph, lastSeen: Date.now()
                     });
-                    document.getElementById('trackBtn').innerText = "STOP TRACKING";
-                    document.getElementById('gps-status').innerText = "Live Beacon Active";
-                }, null, {enableHighAccuracy:true});
+
+                    // Draw Breadcrumbs (Local)
+                    pathCoords.push([latitude, longitude]);
+                    if(pathCoords.length > 50) pathCoords.shift(); // Keep last 50 points
+                    if(pathLine) map.removeLayer(pathLine);
+                    pathLine = L.polyline(pathCoords, {color: colors[role], weight: 2, opacity: 0.5}).addTo(map);
+
+                    document.getElementById('trackBtn').innerText = "BEACON ACTIVE";
+                    document.getElementById('trackBtn').classList.remove('btn-cyan');
+                    document.getElementById('trackBtn').classList.add('btn-green');
+
+                }, null, { enableHighAccuracy: true });
             }
         }
 
-        // RENDER UNITS (with Auto-Cleanup)
+        // --- UNIT RENDERING ---
         let unitLayers = {};
         db.ref('units/').on('value', snap => {
             const units = snap.val();
             const now = Date.now();
-            // Clear old
-            for(let n in unitLayers) map.removeLayer(unitLayers[n]);
-            unitLayers = {};
             
-            for(let name in units) {
+            // Remove old
+            for (let n in unitLayers) map.removeLayer(unitLayers[n]);
+            unitLayers = {};
+
+            for (let name in units) {
                 const u = units[name];
-                // Hide if older than 30 mins
-                if(now - u.lastSeen > 1800000) continue; 
+                if (now - u.lastSeen > 3600000) continue; // 1 hr timeout
 
                 const html = `
-                    <div style="position:relative;">
-                        <div style="width:14px; height:14px; background:${u.color}; border:2px solid white; border-radius:50%; box-shadow:0 0 10px ${u.color};"></div>
-                        <div class="user-dot-label">${name} (${u.batt || '?'})</div>
-                    </div>`;
-                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [14,14], iconAnchor: [7,7] });
-                unitLayers[name] = L.marker([u.lat, u.lng], {icon: icon}).addTo(map);
+                    <div style="text-align:center;">
+                        <div style="width:12px; height:12px; background:${u.color}; border-radius:50%; box-shadow:0 0 8px ${u.color}; border:2px solid white; margin:0 auto;"></div>
+                        <div style="background:rgba(0,0,0,0.7); color:${u.color}; padding:2px 4px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:4px; font-family:'Rajdhani'; white-space:nowrap;">
+                            ${name} [${u.speed || 0}]
+                        </div>
+                    </div>
+                `;
+                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [40, 40], iconAnchor: [20, 10] });
+                unitLayers[name] = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
             }
         });
 
-        // MARKERS RENDER
-        let markLayers = {};
-        db.ref('markups/').on('value', snap => {
-            for(let id in markLayers) map.removeLayer(markLayers[id]);
-            markLayers = {};
-            const val = snap.val();
-            for(let id in val) {
-                const m = val[id];
-                let color = '#fff'; let shape = 'shape-circle';
-                if(m.type === 'repair') { color = '#38bdf8'; shape = 'shape-square'; }
-                if(m.type === 'hazard') { color = '#ef4444'; shape = 'shape-diamond'; }
-                const html = `<div class="${shape}" style="border-color:${color}; background:rgba(0,0,0,0.5);"></div>`;
-                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [14,14], iconAnchor: [7,7] });
-                markLayers[id] = L.marker([m.lat, m.lng], {icon: icon}).addTo(map)
-                    .bindPopup(`<b>${m.type.toUpperCase()}</b><br>${m.note}`);
-            }
-        });
-
-        // CHAT & NOTIFICATIONS
-        function sendMsg() {
-            const txt = document.getElementById('chatInput').value;
-            const user = document.getElementById('username').value || "Anon";
-            if(txt) { db.ref('chat/').push({ user, text: txt }); document.getElementById('chatInput').value = ""; }
+        // --- ASSET LOCKER (New Feature) ---
+        function addAsset() {
+            const item = prompt("Asset Name (e.g. Chainsaw 1):");
+            if(item) db.ref('assets/').push({ name: item, checkedOut: false });
         }
-        db.ref('chat/').limitToLast(50).on('child_added', snap => {
-            const m = snap.val();
-            const div = document.createElement('div');
-            div.style.cssText = `padding:8px; margin-bottom:5px; border-radius:4px; max-width:85%; font-size:13px; color:white; background:var(--panel);`;
-            div.innerHTML = `<b style="color:var(--accent)">${m.user}</b>: ${m.text}`;
-            document.getElementById('chat-feed').prepend(div);
-            
-            // Notification Badge
-            if(currentTab !== 'chat') {
-                document.getElementById('chatBadge').style.display = 'block';
-            }
+        db.ref('assets/').on('value', snap => {
+            const list = document.getElementById('assetList');
+            list.innerHTML = "";
+            snap.forEach(c => {
+                const a = c.val();
+                const div = document.createElement('div');
+                div.className = `list-item ${a.checkedOut ? 'done' : ''}`;
+                div.innerHTML = `
+                    <span>${a.name}</span>
+                    <button class="btn-cyan" style="width:auto; padding:5px 10px; font-size:10px;" onclick="toggleAsset('${c.key}', ${a.checkedOut})">
+                        ${a.checkedOut ? 'RETURN' : 'TAKE'}
+                    </button>
+                `;
+                list.appendChild(div);
+            });
         });
+        window.toggleAsset = (key, stat) => {
+            const user = document.getElementById('username').value || "Someone";
+            db.ref('assets/' + key).update({ checkedOut: !stat, user: !stat ? user : null });
+        };
 
-        // ADMIN
+        // --- UTILS ---
+        function toggleNightMode() {
+            document.getElementById('map').classList.toggle('night-vision');
+        }
+        function toggleTorch() {
+            const t = document.getElementById('torch-overlay');
+            t.style.display = t.style.display === 'block' ? 'none' : 'block';
+        }
+        function zoomToSCA() { map.setView([38.515, -76.513], 15); }
+        function locateMe() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
+
+        // --- ADMIN ---
         let isAdmin = false;
         function toggleAdmin() {
-            if(isAdmin) return;
-            const pass = prompt("Admin Password:");
-            if(pass === "SCA2026") {
+            if (isAdmin) return;
+            if (prompt("CODE:") === "SCA2026") {
                 isAdmin = true;
-                document.getElementById('admin-panel').style.display = 'block';
+                document.getElementById('admin-tools').style.display = 'block';
+                document.getElementById('taskInputWrap').style.display = 'block';
                 document.getElementById('lockIcon').innerText = "🔓";
             }
         }
-        function logoutAdmin() {
-            isAdmin = false;
-            document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('lockIcon').innerText = "🔒";
+        function nuke(node) { if(confirm("CONFIRM WIPE: " + node)) db.ref(node).remove(); }
+        
+        function exportData() {
+            db.ref('/').once('value').then(snap => {
+                const data = JSON.stringify(snap.val(), null, 2);
+                const blob = new Blob([data], {type: 'text/plain'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'SCA_LOGS.txt';
+                a.click();
+            });
         }
-        function clearMap() { if(confirm("Wipe Map?")) db.ref('markups/').remove(); }
-        function clearUnits() { if(confirm("Wipe Users?")) db.ref('units/').remove(); }
-        function clearChat() { if(confirm("Wipe Chat?")) db.ref('chat/').remove(); }
-        function clearTasks() { if(confirm("Wipe Tasks?")) db.ref('tasks/').remove(); }
+        
+        function setAlert() {
+            const msg = prompt("ALERT MESSAGE:");
+            if(msg) {
+                document.getElementById('marqueeBox').style.display = 'flex';
+                document.getElementById('marqueeText').innerText = "⚠️ " + msg + " ⚠️";
+            } else {
+                document.getElementById('marqueeBox').style.display = 'none';
+            }
+        }
 
-        // UTILS
-        function toggleSat() { map.hasLayer(sat) ? (map.removeLayer(sat), map.addLayer(street)) : (map.removeLayer(street), map.addLayer(sat)); }
-        function zoomToMe() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
-        function zoomToSCA() { map.setView([38.514, -76.516], 15); }
+        // --- TASKS & CHAT (Standard) ---
+        function addTask() {
+            const t = document.getElementById('taskInput').value;
+            if(t) { db.ref('tasks/').push({text:t, done:false}); document.getElementById('taskInput').value=""; }
+        }
+        db.ref('tasks/').on('value', snap => {
+            const l = document.getElementById('taskList'); l.innerHTML="";
+            snap.forEach(c => {
+                const t = c.val();
+                l.innerHTML += `<div class="list-item ${t.done?'done':''}" onclick="db.ref('tasks/${c.key}').update({done:!${t.done}})">${t.text}</div>`;
+            });
+        });
+
+        function sendMsg() {
+            const t = document.getElementById('chatInput').value;
+            const u = document.getElementById('username').value || "Anon";
+            if(t) { db.ref('chat/').push({user:u, text:t}); document.getElementById('chatInput').value=""; }
+        }
+        db.ref('chat/').limitToLast(20).on('child_added', s => {
+            const m = s.val();
+            document.getElementById('chatFeed').innerHTML = `<div style="font-size:12px; margin-bottom:5px;"><b style="color:var(--accent)">${m.user}</b>: ${m.text}</div>` + document.getElementById('chatFeed').innerHTML;
+        });
+
     </script>
 </body>
 </html>
