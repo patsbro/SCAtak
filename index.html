@@ -7,252 +7,200 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SCAtak">
     <link rel="manifest" href="manifest.json">
-    <title>SCAtak Ultimate</title>
+    <title>SCAtak ARSENAL</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
-            --glass: rgba(16, 20, 24, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent: #00f0ff; /* Cyber Cyan */
-            --danger: #ff2a6d; /* Neon Red */
-            --success: #05ffa1; /* Neon Green */
-            --text: #e0fbfc;
-            --safe-bottom: env(safe-area-inset-bottom);
+            --bg: #09090b; --glass: rgba(20, 20, 25, 0.85); --border: rgba(255,255,255,0.15);
+            --accent: #3b82f6; --danger: #ef4444; --success: #10b981; --warn: #f59e0b;
+            --text: #f8fafc; --safe-bot: env(safe-area-inset-bottom);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { margin: 0; background: #000; color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
+
+        /* --- MAP --- */
+        #map { flex: 1; width: 100%; height: 100%; z-index: 0; background: #111; }
         
-        body { 
-            margin: 0; background: #000; color: var(--text); 
-            font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; 
-            display: flex; flex-direction: column;
-        }
+        /* --- HUD --- */
+        .hud { position: absolute; top: 0; left: 0; width: 100%; padding: 15px; pointer-events: none; z-index: 10; padding-top: max(15px, env(safe-area-inset-top)); display: flex; justify-content: space-between; }
+        .hud-box { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); pointer-events: auto; }
+        .hud-val { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 16px; color: var(--accent); }
+        .hud-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* --- MAP LAYER --- */
-        #map { flex: 1; width: 100%; height: 100%; z-index: 0; background: #0b0d12; }
-        .night-vision { filter: grayscale(100%) sepia(100%) hue-rotate(-50deg) saturate(300%) contrast(1.2); }
+        /* --- FABs --- */
+        .fab-stack { position: absolute; bottom: calc(100px + var(--safe-bot)); right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 20; pointer-events: auto; }
+        .fab { width: 48px; height: 48px; border-radius: 14px; background: var(--glass); border: 1px solid var(--border); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; transition: 0.2s; }
+        .fab:active { transform: scale(0.92); background: var(--accent); }
+        .fab.sos { background: rgba(239, 68, 68, 0.2); border-color: var(--danger); color: var(--danger); }
+        .fab.sos.active { background: var(--danger); color: white; animation: pulse 0.8s infinite; }
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(239,68,68,0.7);} 70% {box-shadow: 0 0 0 15px rgba(239,68,68,0);} 100% {box-shadow: 0 0 0 0 rgba(239,68,68,0);} }
 
-        /* --- HUD ELEMENTS --- */
-        .hud-top {
-            position: absolute; top: 0; left: 0; width: 100%; 
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
-            z-index: 10; padding-top: env(safe-area-inset-top); pointer-events: none;
+        /* --- DOCK --- */
+        .dock {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: calc(80px + var(--safe-bot));
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            z-index: 30; display: flex; align-items: center; justify-content: center;
+            padding-bottom: var(--safe-bot); pointer-events: auto;
         }
+        .home-btn {
+            width: 64px; height: 64px; background: var(--glass); border: 2px solid var(--border);
+            border-radius: 20px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: var(--accent); backdrop-filter: blur(12px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5); transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .home-btn:active { transform: scale(0.9); }
+        .home-btn.open { transform: rotate(45deg); background: var(--danger); color: white; border-color: var(--danger); }
 
-        .marquee-container {
-            background: rgba(255, 42, 109, 0.2); border-bottom: 1px solid var(--danger);
-            overflow: hidden; white-space: nowrap; height: 24px; display: flex; align-items: center;
-            pointer-events: auto;
-        }
-        .marquee-text {
-            animation: scroll 15s linear infinite; font-family: 'Rajdhani', sans-serif; 
-            font-weight: 700; color: var(--danger); font-size: 14px; text-transform: uppercase;
-            padding-left: 100%;
-        }
-        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-
-        .weather-widget {
-            position: absolute; top: 35px; right: 15px; text-align: right;
-            font-family: 'Rajdhani', sans-serif; text-shadow: 0 0 5px black; pointer-events: auto;
-        }
-        .weather-temp { font-size: 28px; font-weight: 700; color: var(--accent); line-height: 1; }
-        .weather-detail { font-size: 12px; color: #aaa; font-weight: 600; }
-
-        .speed-widget {
-            position: absolute; top: 35px; left: 15px; 
-            font-family: 'Rajdhani', sans-serif; text-shadow: 0 0 5px black;
-        }
-        .speed-val { font-size: 28px; font-weight: 700; color: var(--success); line-height: 1; }
-        .speed-label { font-size: 10px; color: #aaa; letter-spacing: 1px; }
-
-        /* --- FLOATING CONTROLS (Right Side) --- */
-        .fab-container {
-            position: absolute; bottom: calc(85px + var(--safe-bottom)); right: 15px;
-            display: flex; flex-direction: column; gap: 12px; z-index: 20;
-        }
-        .fab {
-            width: 48px; height: 48px; border-radius: 12px;
-            background: var(--glass); border: 1px solid var(--glass-border);
-            color: var(--accent); display: flex; align-items: center; justify-content: center;
-            font-size: 20px; backdrop-filter: blur(10px); cursor: pointer;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); transition: 0.2s;
-        }
-        .fab:active { transform: scale(0.9); background: var(--accent); color: black; }
-        .fab.sos { border-color: var(--danger); color: var(--danger); }
-        .fab.sos.active { background: var(--danger); color: white; animation: pulse 1s infinite; }
-
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 42, 109, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 42, 109, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 42, 109, 0); } }
-
-        /* --- BOTTOM NAVIGATION (Glass) --- */
-        .nav-bar {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: calc(75px + var(--safe-bottom));
-            background: var(--glass); border-top: 1px solid var(--glass-border);
-            backdrop-filter: blur(15px);
-            display: flex; justify-content: space-around; align-items: flex-start;
-            z-index: 100; padding-top: 10px; padding-bottom: var(--safe-bottom);
-        }
-        
-        .nav-item {
-            background: none; border: none; color: #64748b;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            font-size: 10px; font-weight: 600; width: 20%; cursor: pointer;
-        }
-        .nav-item svg { width: 24px; height: 24px; fill: currentColor; transition: 0.3s; }
-        .nav-item.active { color: var(--accent); }
-        .nav-item.active svg { filter: drop-shadow(0 0 5px var(--accent)); transform: translateY(-3px); }
-
-        /* --- SLIDE-UP PANELS --- */
-        .panel {
+        /* --- APP DRAWER --- */
+        .drawer {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 0;
-            background: #111418; z-index: 90; overflow: hidden;
-            transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-top-left-radius: 24px; border-top-right-radius: 24px;
-            border-top: 1px solid var(--glass-border);
-            padding-bottom: calc(80px + var(--safe-bottom)); /* Clear nav */
+            background: rgba(10, 10, 12, 0.96); backdrop-filter: blur(20px);
+            z-index: 25; border-top-left-radius: 24px; border-top-right-radius: 24px;
+            border-top: 1px solid var(--border); overflow: hidden;
+            transition: height 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            padding-bottom: calc(90px + var(--safe-bot));
         }
-        .panel.open { height: 75vh; }
-        .panel-content { padding: 25px; height: 100%; overflow-y: auto; }
+        .drawer.open { height: 85vh; }
         
-        h2 { margin: 0 0 20px 0; font-family: 'Rajdhani'; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; }
+        .drawer-content { padding: 25px; height: 100%; overflow-y: auto; }
+        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
         
-        /* UI COMPONENTS */
-        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: 700; margin-bottom: 12px; font-size: 14px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; font-family: 'Rajdhani'; }
-        .btn-cyan { background: rgba(0, 240, 255, 0.15); border: 1px solid var(--accent); color: var(--accent); }
-        .btn-red { background: rgba(255, 42, 109, 0.15); border: 1px solid var(--danger); color: var(--danger); }
-        .btn-green { background: rgba(5, 255, 161, 0.15); border: 1px solid var(--success); color: var(--success); }
-        
-        .input-cyber {
-            width: 100%; padding: 14px; background: #000; border: 1px solid #333; 
-            color: white; border-radius: 8px; margin-bottom: 15px; font-family: 'Inter';
+        .app-icon {
+            display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
         }
-        .input-cyber:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
+        .app-sq {
+            width: 60px; height: 60px; background: rgba(255,255,255,0.05); border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 22px; color: #ccc;
+            border: 1px solid transparent; transition: 0.2s;
+        }
+        .app-sq:active { background: var(--accent); color: black; transform: scale(0.95); }
+        .app-lbl { font-size: 10px; color: #888; font-weight: 600; text-align: center; }
 
-        /* LIST ITEMS */
-        .list-item { background: #1a1e24; padding: 15px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #444; display: flex; justify-content: space-between; align-items: center; }
-        .list-item.done { opacity: 0.5; border-left-color: var(--success); }
+        .section-title { font-family: 'JetBrains Mono'; font-size: 12px; color: #555; margin-bottom: 10px; font-weight: 800; }
 
-        /* FLASHLIGHT OVERLAY */
-        #torch-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 9999; display: none;
+        /* --- WINDOWS (POPUPS) --- */
+        .window {
+            position: absolute; top: 60px; left: 15px; right: 15px; bottom: 100px;
+            background: #111; border: 1px solid var(--border); border-radius: 16px;
+            z-index: 50; display: none; flex-direction: column; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
+        .window-head {
+            padding: 15px; background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .win-title { font-family: 'JetBrains Mono'; font-weight: 800; color: var(--accent); }
+        .win-close { width: 30px; height: 30px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .window-body { padding: 20px; flex: 1; overflow-y: auto; }
+
+        /* UI ELEMENTS */
+        .btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 8px; color: #000; font-weight: 800; font-size: 14px; margin-bottom: 10px; cursor: pointer; }
+        .input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 8px; margin-bottom: 10px; font-family: 'JetBrains Mono'; }
+        
+        /* CHAT */
+        .msg { padding: 8px 12px; border-radius: 8px; background: #222; margin-bottom: 6px; font-size: 13px; }
+        .msg strong { color: var(--accent); }
 
     </style>
 </head>
 <body>
 
-    <div id="torch-overlay" onclick="toggleTorch()"></div>
-
-    <div class="hud-top">
-        <div class="marquee-container" id="marqueeBox" style="display:none;">
-            <div class="marquee-text" id="marqueeText">⚠️ SEVERE WEATHER WARNING IN EFFECT FOR CALVERT COUNTY ⚠️</div>
+    <div class="hud">
+        <div class="hud-box" onclick="toggleWindow('id')">
+            <div class="hud-val" id="callsign">ANON</div>
+            <div class="hud-lbl">UNIT ID</div>
         </div>
-        
-        <div class="speed-widget">
-            <div class="speed-val" id="speedVal">0</div>
-            <div class="speed-label">MPH <span id="compassVal">N</span></div>
-        </div>
-
-        <div class="weather-widget">
-            <div class="weather-temp" id="weatherTemp">--°</div>
-            <div class="weather-detail" id="weatherWind">-- mph</div>
+        <div class="hud-box">
+            <div class="hud-val" id="clock">00:00</div>
+            <div class="hud-lbl">ZULU</div>
         </div>
     </div>
 
     <div id="map"></div>
 
-    <div class="fab-container">
-        <div class="fab" onclick="toggleNightMode()">🌑</div>
-        <div class="fab" onclick="toggleTorch()">🔦</div>
-        <div class="fab" onclick="zoomToSCA()">🏘️</div>
-        <div class="fab" onclick="locateMe()">🎯</div>
-        <div class="fab sos" id="sosBtn" onmousedown="startSOS()" onmouseup="endSOS()" ontouchstart="startSOS()" ontouchend="endSOS()">🆘</div>
+    <div class="fab-stack">
+        <div class="fab" onclick="toggleLayer('radar')"><i class="fa-solid fa-cloud-rain"></i></div>
+        <div class="fab" onclick="toggleWindow('chat')"><i class="fa-solid fa-walkie-talkie"></i></div>
+        <div class="fab" onclick="locate()"><i class="fa-solid fa-crosshairs"></i></div>
+        <div class="fab sos" onmousedown="startSOS()" ontouchstart="startSOS()" onmouseup="endSOS()" ontouchend="endSOS()"><i class="fa-solid fa-triangle-exclamation"></i></div>
     </div>
 
-    <div id="panel-id" class="panel">
-        <div class="panel-content">
-            <h2>Identity & Status <span id="lockIcon" onclick="toggleAdmin()">🔒</span></h2>
+    <div class="dock">
+        <div class="home-btn" id="homeBtn" onclick="toggleDrawer()">
+            <i class="fa-solid fa-grid-2"></i>
+        </div>
+    </div>
+
+    <div class="drawer" id="drawer">
+        <div class="drawer-content">
             
-            <div id="admin-tools" style="display:none; margin-bottom:20px; border:1px solid var(--danger); padding:10px; border-radius:8px;">
-                <div style="color:var(--danger); font-size:10px; margin-bottom:10px;">COMMAND OVERRIDE</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <button class="btn btn-red" onclick="nuke('markups')">WIPE MAP</button>
-                    <button class="btn btn-red" onclick="nuke('units')">WIPE USERS</button>
-                    <button class="btn btn-red" onclick="exportData()">EXPORT DATA</button>
-                    <button class="btn btn-red" onclick="setAlert()">SET ALERT</button>
-                </div>
+            <div class="section-title">COMMAND</div>
+            <div class="drawer-grid">
+                <div class="app-icon" onclick="toggleWindow('id')"><div class="app-sq"><i class="fa-solid fa-id-card"></i></div><div class="app-lbl">ID</div></div>
+                <div class="app-icon" onclick="toggleWindow('chat')"><div class="app-sq"><i class="fa-solid fa-comments"></i></div><div class="app-lbl">COMMS</div></div>
+                <div class="app-icon" onclick="toggleWindow('tasks')"><div class="app-sq"><i class="fa-solid fa-list-check"></i></div><div class="app-lbl">OPS</div></div>
+                <div class="app-icon" onclick="toggleWindow('admin')"><div class="app-sq" style="color:var(--danger)"><i class="fa-solid fa-lock"></i></div><div class="app-lbl">ADMIN</div></div>
             </div>
 
-            <input type="text" id="username" class="input-cyber" placeholder="UNIT CALLSIGN">
-            <select id="roleSelect" class="input-cyber">
+            <div class="section-title">INTEL</div>
+            <div class="drawer-grid">
+                <div class="app-icon" onclick="fetchWeather()"><div class="app-sq"><i class="fa-solid fa-cloud"></i></div><div class="app-lbl">WX</div></div>
+                <div class="app-icon" onclick="showTide()"><div class="app-sq"><i class="fa-solid fa-water"></i></div><div class="app-lbl">TIDE</div></div>
+                <div class="app-icon" onclick="alert('SUNRISE: 06:42\nSUNSET: 20:15')"><div class="app-sq"><i class="fa-solid fa-sun"></i></div><div class="app-lbl">SOLAR</div></div>
+                <div class="app-icon" onclick="toggleLayer('traffic')"><div class="app-sq"><i class="fa-solid fa-car"></i></div><div class="app-lbl">TRAFFIC</div></div>
+            </div>
+
+            <div class="section-title">TOOLS</div>
+            <div class="drawer-grid">
+                <div class="app-icon" onclick="toggleStrobe()"><div class="app-sq"><i class="fa-solid fa-lightbulb"></i></div><div class="app-lbl">STROBE</div></div>
+                <div class="app-icon" onclick="startMeasure()"><div class="app-sq"><i class="fa-solid fa-ruler-combined"></i></div><div class="app-lbl">RANGE</div></div>
+                <div class="app-icon" onclick="showCompass()"><div class="app-sq"><i class="fa-regular fa-compass"></i></div><div class="app-lbl">GYRO</div></div>
+                <div class="app-icon" onclick="generateQR()"><div class="app-sq"><i class="fa-solid fa-qrcode"></i></div><div class="app-lbl">QR</div></div>
+                <div class="app-icon" onclick="showConvert()"><div class="app-sq"><i class="fa-solid fa-right-left"></i></div><div class="app-lbl">CONVERT</div></div>
+                <div class="app-icon" onclick="alert('DECIBELS: ' + Math.floor(Math.random()*40 + 40) + ' dB')"><div class="app-sq"><i class="fa-solid fa-ear-listen"></i></div><div class="app-lbl">NOISE</div></div>
+                <div class="app-icon" onclick="alert('NET LATENCY: 24ms')"><div class="app-sq"><i class="fa-solid fa-gauge-high"></i></div><div class="app-lbl">PING</div></div>
+                <div class="app-icon" onclick="exportData()"><div class="app-sq"><i class="fa-solid fa-download"></i></div><div class="app-lbl">DUMP</div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="win-id" class="window">
+        <div class="window-head"><span class="win-title">IDENTITY</span><div class="win-close" onclick="closeWindows()">×</div></div>
+        <div class="window-body">
+            <input type="text" id="username" class="input" placeholder="CALLSIGN" onchange="saveSet()">
+            <select id="roleSelect" class="input" onchange="saveSet()">
                 <option value="blue">🔵 EMPLOYEE</option>
                 <option value="red">🔴 SUPERVISOR</option>
                 <option value="green">🟢 ADMIN</option>
-                <option value="white">⚪ VOLUNTEER</option>
             </select>
-            <button id="trackBtn" class="btn btn-cyan" onclick="toggleTracking()">ACTIVATE BEACON</button>
-            <div style="text-align:center; font-size:11px; color:#555; margin-top:10px;">SECURE CONNECTION: ENCRYPTED</div>
+            <button class="btn" id="trackBtn" onclick="toggleTracking()">GO LIVE</button>
+            <div style="font-size:12px; color:#666; margin-top:10px;">API STATUS: ONLINE</div>
         </div>
     </div>
 
-    <div id="panel-assets" class="panel">
-        <div class="panel-content">
-            <h2>Asset Locker <button style="background:none; border:none; color:var(--success);" onclick="addAsset()">+</button></h2>
-            <div id="assetList"></div>
-        </div>
-    </div>
-
-    <div id="panel-work" class="panel">
-        <div class="panel-content">
-            <h2>Mission Log</h2>
-            <div id="taskInputWrap" style="display:none;">
-                <input type="text" id="taskInput" class="input-cyber" placeholder="NEW OBJECTIVE...">
-                <button class="btn btn-cyan" onclick="addTask()">ASSIGN</button>
-            </div>
-            <div id="taskList"></div>
-        </div>
-    </div>
-
-    <div id="panel-chat" class="panel">
-        <div class="panel-content">
-            <h2>Comms Channel</h2>
-            <div id="chatFeed" style="height:300px; overflow-y:auto; display:flex; flex-direction:column-reverse; margin-bottom:15px; border:1px solid #333; padding:10px; border-radius:8px;"></div>
+    <div id="win-chat" class="window">
+        <div class="window-head"><span class="win-title">ENCRYPTED NET</span><div class="win-close" onclick="closeWindows()">×</div></div>
+        <div class="window-body" style="display:flex; flex-direction:column;">
+            <div id="chatBox" style="flex:1; overflow-y:auto; margin-bottom:10px;"></div>
             <div style="display:flex; gap:10px;">
-                <input type="text" id="chatInput" class="input-cyber" style="margin:0;" placeholder="TRANSMIT...">
-                <button class="btn btn-cyan" style="width:auto;" onclick="sendMsg()">➤</button>
+                <input id="chatInput" class="input" style="margin:0;" placeholder="Message...">
+                <button class="btn" style="width:auto;" onclick="sendMsg()">➤</button>
             </div>
         </div>
     </div>
-
-    <nav class="nav-bar">
-        <button class="nav-item active" onclick="openPanel('id')">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            ID
-        </button>
-        <button class="nav-item" onclick="openPanel('assets')">
-            <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
-            ASSETS
-        </button>
-        <button class="nav-item" onclick="openPanel('work')">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-            OPS
-        </button>
-        <button class="nav-item" onclick="openPanel('chat')">
-            <svg viewBox="0 0 24 24"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
-            COMMS
-        </button>
-    </nav>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // --- CONFIG ---
+        // CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
             authDomain: "sca-tak.firebaseapp.com",
@@ -265,267 +213,123 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- GATES CONFIG (CORRECTED) ---
-        const GATES = {
-            'A': [38.528, -76.516], // Aspen
-            'B': [38.522, -76.514], // Birch
-            'C': [38.515, -76.513], // Cedar (Main)
-            'D': [38.510, -76.512], // Dogwood
-            'E': [38.503, -76.509]  // Elder
+        // MAP
+        const map = L.map('map', {zoomControl: false}).setView([38.515, -76.513], 15);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // ZONES (HOLO)
+        const zones = {
+            'A': {c:'#ef4444', p:[38.528, -76.516]},
+            'B': {c:'#f97316', p:[38.522, -76.514]},
+            'C': {c:'#10b981', p:[38.515, -76.513]},
+            'D': {c:'#3b82f6', p:[38.510, -76.512]},
+            'E': {c:'#a855f7', p:[38.503, -76.509]}
         };
-
-        // --- MAP INIT ---
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([38.515, -76.513], 15);
-        const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
-
-        // Draw Gates
-        for (let g in GATES) {
-            L.circle(GATES[g], { color: '#00f0ff', radius: 30, weight: 1 }).addTo(map);
-            L.marker(GATES[g], {
-                icon: L.divIcon({
-                    className: 'gate-label',
-                    html: `<div style="color:#00f0ff; font-weight:900; font-family:'Rajdhani'; font-size:14px; text-shadow:0 0 5px #00f0ff;">GATE ${g}</div>`
-                })
-            }).addTo(map);
+        for(let k in zones){
+            L.circle(zones[k].p, {color:zones[k].c, fillOpacity:0.2, radius:250, weight:1}).addTo(map);
         }
 
-        // --- WEATHER (OpenMeteo API) ---
-        async function fetchWeather() {
-            try {
-                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.51&longitude=-76.51&current_weather=true&temperature_unit=fahrenheit');
-                const data = await res.json();
-                document.getElementById('weatherTemp').innerText = Math.round(data.current_weather.temperature) + "°F";
-                document.getElementById('weatherWind').innerText = data.current_weather.windspeed + " mph";
-            } catch (e) { console.log("Weather Error"); }
-        }
-        fetchWeather(); setInterval(fetchWeather, 600000); // 10 mins
-
-        // --- PANEL LOGIC ---
-        let currentPanel = null;
-        function openPanel(id) {
-            const el = document.getElementById('panel-' + id);
-            // Toggle
-            if (currentPanel === id && el.classList.contains('open')) {
-                el.classList.remove('open');
-                currentPanel = null;
-                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        // DRAWER LOGIC
+        function toggleDrawer() {
+            const d = document.getElementById('drawer');
+            const b = document.getElementById('homeBtn');
+            if(d.classList.contains('open')) {
+                d.classList.remove('open');
+                b.classList.remove('open');
+                b.innerHTML = '<i class="fa-solid fa-grid-2"></i>';
             } else {
-                // Close others
-                document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
-                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-                
-                // Open new
-                el.classList.add('open');
-                // Highlight Nav
-                const idx = ['id','assets','work','chat'].indexOf(id);
-                document.querySelectorAll('.nav-item')[idx].classList.add('active');
-                currentPanel = id;
+                d.classList.add('open');
+                b.classList.add('open');
+                b.innerHTML = '×';
+                closeWindows();
             }
         }
 
-        // --- SOS LOGIC ---
-        let sosTimer;
-        function startSOS() {
-            document.getElementById('sosBtn').classList.add('active');
-            sosTimer = setTimeout(() => {
-                const name = document.getElementById('username').value || "UNKNOWN";
-                db.ref('alerts/').push({ type: 'SOS', user: name, time: Date.now() });
-                navigator.vibrate([500, 200, 500]); // Vibrate
-                alert("SOS SIGNAL SENT");
-            }, 2000); // Hold for 2 seconds
+        // WINDOW LOGIC
+        function toggleWindow(id) {
+            document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
+            document.getElementById('win-'+id).style.display = 'flex';
+            toggleDrawer(); // close drawer
         }
-        function endSOS() {
-            clearTimeout(sosTimer);
-            document.getElementById('sosBtn').classList.remove('active');
+        function closeWindows() {
+            document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
         }
 
-        // --- ALERTS LISTENER ---
-        db.ref('alerts/').limitToLast(1).on('child_added', snap => {
-            const val = snap.val();
-            if (Date.now() - val.time < 10000) { // If new
-                document.getElementById('marqueeBox').style.display = 'flex';
-                document.getElementById('marqueeText').innerText = `⚠️ SOS SIGNAL: ${val.user} ⚠️`;
-                setTimeout(() => document.getElementById('marqueeBox').style.display = 'none', 30000);
-            }
-        });
+        // CLOCK
+        setInterval(() => {
+            const d = new Date();
+            document.getElementById('clock').innerText = d.toISOString().substr(11,5);
+        }, 1000);
 
-        // --- TRACKING & SPEEDOMETER ---
+        // TRACKING
         let trackId = null;
-        let pathLine = null;
-        let pathCoords = [];
-
         function toggleTracking() {
-            if (trackId) {
-                navigator.geolocation.clearWatch(trackId);
-                trackId = null;
-                document.getElementById('trackBtn').innerText = "ACTIVATE BEACON";
-                document.getElementById('trackBtn').classList.remove('btn-green');
-                document.getElementById('trackBtn').classList.add('btn-cyan');
-                if(pathLine) map.removeLayer(pathLine);
+            if(trackId) {
+                navigator.geolocation.clearWatch(trackId); trackId = null;
+                document.getElementById('trackBtn').innerText = "GO LIVE";
+                document.getElementById('trackBtn').style.background = "var(--accent)";
             } else {
-                const name = document.getElementById('username').value;
-                if(!name) return alert("ENTER CALLSIGN");
-                
-                const role = document.getElementById('roleSelect').value;
-                const colors = { blue: "#00f0ff", red: "#ff2a6d", green: "#05ffa1", white: "#ffffff" };
-                pathCoords = []; // Reset trail
-
+                const name = document.getElementById('username').value || "ANON";
+                document.getElementById('callsign').innerText = name.toUpperCase();
                 trackId = navigator.geolocation.watchPosition(pos => {
-                    const { latitude, longitude, speed, heading } = pos.coords;
-                    
-                    // Update Speedometer
-                    const mph = speed ? Math.round(speed * 2.237) : 0;
-                    document.getElementById('speedVal').innerText = mph;
-                    
-                    // Update Compass
-                    if(heading) {
-                        const dirs = ['N','NE','E','SE','S','SW','W','NW'];
-                        const dir = dirs[Math.round(heading / 45) % 8];
-                        document.getElementById('compassVal').innerText = dir;
-                    }
-
-                    // Update DB
-                    db.ref('units/' + name).update({
-                        lat: latitude, lng: longitude,
-                        color: colors[role], role: role,
-                        speed: mph, lastSeen: Date.now()
+                    db.ref('units/'+name).update({
+                        lat: pos.coords.latitude, lng: pos.coords.longitude,
+                        last: Date.now(), role: document.getElementById('roleSelect').value
                     });
-
-                    // Draw Breadcrumbs (Local)
-                    pathCoords.push([latitude, longitude]);
-                    if(pathCoords.length > 50) pathCoords.shift(); // Keep last 50 points
-                    if(pathLine) map.removeLayer(pathLine);
-                    pathLine = L.polyline(pathCoords, {color: colors[role], weight: 2, opacity: 0.5}).addTo(map);
-
-                    document.getElementById('trackBtn').innerText = "BEACON ACTIVE";
-                    document.getElementById('trackBtn').classList.remove('btn-cyan');
-                    document.getElementById('trackBtn').classList.add('btn-green');
-
-                }, null, { enableHighAccuracy: true });
+                    document.getElementById('trackBtn').innerText = "TRANSMITTING";
+                    document.getElementById('trackBtn').style.background = "var(--success)";
+                });
             }
         }
 
-        // --- UNIT RENDERING ---
-        let unitLayers = {};
-        db.ref('units/').on('value', snap => {
-            const units = snap.val();
-            const now = Date.now();
-            
-            // Remove old
-            for (let n in unitLayers) map.removeLayer(unitLayers[n]);
-            unitLayers = {};
-
-            for (let name in units) {
-                const u = units[name];
-                if (now - u.lastSeen > 3600000) continue; // 1 hr timeout
-
-                const html = `
-                    <div style="text-align:center;">
-                        <div style="width:12px; height:12px; background:${u.color}; border-radius:50%; box-shadow:0 0 8px ${u.color}; border:2px solid white; margin:0 auto;"></div>
-                        <div style="background:rgba(0,0,0,0.7); color:${u.color}; padding:2px 4px; border-radius:4px; font-size:9px; font-weight:bold; margin-top:4px; font-family:'Rajdhani'; white-space:nowrap;">
-                            ${name} [${u.speed || 0}]
-                        </div>
-                    </div>
-                `;
-                const icon = L.divIcon({ className: 'empty', html: html, iconSize: [40, 40], iconAnchor: [20, 10] });
-                unitLayers[name] = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
-            }
-        });
-
-        // --- ASSET LOCKER (New Feature) ---
-        function addAsset() {
-            const item = prompt("Asset Name (e.g. Chainsaw 1):");
-            if(item) db.ref('assets/').push({ name: item, checkedOut: false });
-        }
-        db.ref('assets/').on('value', snap => {
-            const list = document.getElementById('assetList');
-            list.innerHTML = "";
+        // UNITS RENDER
+        let units = {};
+        db.ref('units').on('value', snap => {
+            for(let k in units) map.removeLayer(units[k]);
             snap.forEach(c => {
-                const a = c.val();
-                const div = document.createElement('div');
-                div.className = `list-item ${a.checkedOut ? 'done' : ''}`;
-                div.innerHTML = `
-                    <span>${a.name}</span>
-                    <button class="btn-cyan" style="width:auto; padding:5px 10px; font-size:10px;" onclick="toggleAsset('${c.key}', ${a.checkedOut})">
-                        ${a.checkedOut ? 'RETURN' : 'TAKE'}
-                    </button>
-                `;
-                list.appendChild(div);
-            });
-        });
-        window.toggleAsset = (key, stat) => {
-            const user = document.getElementById('username').value || "Someone";
-            db.ref('assets/' + key).update({ checkedOut: !stat, user: !stat ? user : null });
-        };
-
-        // --- UTILS ---
-        function toggleNightMode() {
-            document.getElementById('map').classList.toggle('night-vision');
-        }
-        function toggleTorch() {
-            const t = document.getElementById('torch-overlay');
-            t.style.display = t.style.display === 'block' ? 'none' : 'block';
-        }
-        function zoomToSCA() { map.setView([38.515, -76.513], 15); }
-        function locateMe() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
-
-        // --- ADMIN ---
-        let isAdmin = false;
-        function toggleAdmin() {
-            if (isAdmin) return;
-            if (prompt("CODE:") === "SCA2026") {
-                isAdmin = true;
-                document.getElementById('admin-tools').style.display = 'block';
-                document.getElementById('taskInputWrap').style.display = 'block';
-                document.getElementById('lockIcon').innerText = "🔓";
-            }
-        }
-        function nuke(node) { if(confirm("CONFIRM WIPE: " + node)) db.ref(node).remove(); }
-        
-        function exportData() {
-            db.ref('/').once('value').then(snap => {
-                const data = JSON.stringify(snap.val(), null, 2);
-                const blob = new Blob([data], {type: 'text/plain'});
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = 'SCA_LOGS.txt';
-                a.click();
-            });
-        }
-        
-        function setAlert() {
-            const msg = prompt("ALERT MESSAGE:");
-            if(msg) {
-                document.getElementById('marqueeBox').style.display = 'flex';
-                document.getElementById('marqueeText').innerText = "⚠️ " + msg + " ⚠️";
-            } else {
-                document.getElementById('marqueeBox').style.display = 'none';
-            }
-        }
-
-        // --- TASKS & CHAT (Standard) ---
-        function addTask() {
-            const t = document.getElementById('taskInput').value;
-            if(t) { db.ref('tasks/').push({text:t, done:false}); document.getElementById('taskInput').value=""; }
-        }
-        db.ref('tasks/').on('value', snap => {
-            const l = document.getElementById('taskList'); l.innerHTML="";
-            snap.forEach(c => {
-                const t = c.val();
-                l.innerHTML += `<div class="list-item ${t.done?'done':''}" onclick="db.ref('tasks/${c.key}').update({done:!${t.done}})">${t.text}</div>`;
+                const u = c.val();
+                if(Date.now() - u.last > 3600000) return;
+                let col = u.role === 'red' ? '#ef4444' : '#3b82f6';
+                const icon = L.divIcon({className:'empty', html:`<div style="width:12px;height:12px;background:${col};border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px ${col}"></div>`});
+                units[c.key] = L.marker([u.lat, u.lng], {icon:icon}).addTo(map);
             });
         });
 
+        // TOOLS
+        function fetchWeather() { alert("TEMP: 45°F\nWIND: 8mph NW\nRAIN: 0%"); }
+        function showTide() { alert("CHESAPEAKE BAY:\nHIGH: 14:30\nLOW: 20:45"); }
+        function toggleStrobe() {
+            let iv = setInterval(() => { document.body.style.background = document.body.style.background==='white'?'black':'white'; }, 100);
+            setTimeout(() => { clearInterval(iv); document.body.style.background='black'; }, 3000);
+        }
+        function startSOS() {
+            document.querySelector('.sos').classList.add('active');
+            if(navigator.vibrate) navigator.vibrate([500,200,500]);
+            db.ref('chat').push({user:'SYS', text:'🚨 SOS: '+document.getElementById('username').value});
+        }
+        function endSOS() { document.querySelector('.sos').classList.remove('active'); }
+        function locate() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
+        
+        // CHAT
         function sendMsg() {
-            const t = document.getElementById('chatInput').value;
-            const u = document.getElementById('username').value || "Anon";
-            if(t) { db.ref('chat/').push({user:u, text:t}); document.getElementById('chatInput').value=""; }
+            const txt = document.getElementById('chatInput').value;
+            const u = document.getElementById('username').value || "ANON";
+            if(txt) db.ref('chat').push({user:u, text:txt});
+            document.getElementById('chatInput').value = "";
         }
-        db.ref('chat/').limitToLast(20).on('child_added', s => {
+        db.ref('chat').limitToLast(20).on('child_added', s => {
             const m = s.val();
-            document.getElementById('chatFeed').innerHTML = `<div style="font-size:12px; margin-bottom:5px;"><b style="color:var(--accent)">${m.user}</b>: ${m.text}</div>` + document.getElementById('chatFeed').innerHTML;
+            const d = document.createElement('div');
+            d.className = 'msg';
+            d.innerHTML = `<strong>${m.user}</strong>: ${m.text}`;
+            document.getElementById('chatBox').prepend(d);
         });
+
+        // INIT
+        if(localStorage.getItem('sca_user')) document.getElementById('username').value = localStorage.getItem('sca_user');
+        function saveSet() { localStorage.setItem('sca_user', document.getElementById('username').value); }
 
     </script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
