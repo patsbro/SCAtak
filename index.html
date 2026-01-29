@@ -5,202 +5,235 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SCAtak">
-    <link rel="manifest" href="manifest.json">
-    <title>SCAtak ARSENAL</title>
+    <title>SCAtak | Community Beast</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         :root {
-            --bg: #09090b; --glass: rgba(20, 20, 25, 0.85); --border: rgba(255,255,255,0.15);
-            --accent: #3b82f6; --danger: #ef4444; --success: #10b981; --warn: #f59e0b;
-            --text: #f8fafc; --safe-bot: env(safe-area-inset-bottom);
+            --bg: #0f1115; --panel: #181b21; --border: #2d333b;
+            --primary: #3b82f6; --success: #10b981; --warn: #f59e0b; --danger: #ef4444;
+            --text-main: #f3f4f6; --text-muted: #9ca3af;
+            --nav-height: 70px; --safe-bot: env(safe-area-inset-bottom);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-        body { margin: 0; background: #000; color: var(--text); font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
 
-        /* --- MAP --- */
-        #map { flex: 1; width: 100%; height: 100%; z-index: 0; background: #111; }
+        /* --- LOCK SCREEN --- */
+        #lock-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 9999; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .lock-input { 
+            background: var(--panel); border: 1px solid var(--border); color: white; 
+            padding: 15px; border-radius: 12px; font-size: 20px; letter-spacing: 5px; 
+            text-align: center; width: 200px; margin-top: 20px; outline: none;
+        }
+        .lock-input:focus { border-color: var(--primary); }
+
+        /* --- MAIN LAYOUT --- */
+        #app-container { flex: 1; display: flex; flex-direction: column; position: relative; }
         
-        /* --- HUD --- */
-        .hud { position: absolute; top: 0; left: 0; width: 100%; padding: 15px; pointer-events: none; z-index: 10; padding-top: max(15px, env(safe-area-inset-top)); display: flex; justify-content: space-between; }
-        .hud-box { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); pointer-events: auto; }
-        .hud-val { font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 16px; color: var(--accent); }
-        .hud-lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-
-        /* --- FABs --- */
-        .fab-stack { position: absolute; bottom: calc(100px + var(--safe-bot)); right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 20; pointer-events: auto; }
-        .fab { width: 48px; height: 48px; border-radius: 14px; background: var(--glass); border: 1px solid var(--border); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; transition: 0.2s; }
-        .fab:active { transform: scale(0.92); background: var(--accent); }
-        .fab.sos { background: rgba(239, 68, 68, 0.2); border-color: var(--danger); color: var(--danger); }
-        .fab.sos.active { background: var(--danger); color: white; animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(239,68,68,0.7);} 70% {box-shadow: 0 0 0 15px rgba(239,68,68,0);} 100% {box-shadow: 0 0 0 0 rgba(239,68,68,0);} }
-
-        /* --- DOCK --- */
-        .dock {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: calc(80px + var(--safe-bot));
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            z-index: 30; display: flex; align-items: center; justify-content: center;
-            padding-bottom: var(--safe-bot); pointer-events: auto;
+        /* TOP BAR */
+        .top-bar {
+            height: 60px; background: rgba(24, 27, 33, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border); display: flex; align-items: center;
+            justify-content: space-between; padding: 0 20px; padding-top: env(safe-area-inset-top);
+            z-index: 50;
         }
-        .home-btn {
-            width: 64px; height: 64px; background: var(--glass); border: 2px solid var(--border);
-            border-radius: 20px; display: flex; align-items: center; justify-content: center;
-            font-size: 24px; color: var(--accent); backdrop-filter: blur(12px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5); transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .home-btn:active { transform: scale(0.9); }
-        .home-btn.open { transform: rotate(45deg); background: var(--danger); color: white; border-color: var(--danger); }
+        .brand { font-weight: 800; letter-spacing: -0.5px; font-size: 18px; color: var(--primary); }
+        .user-badge { font-size: 11px; background: var(--border); padding: 4px 10px; border-radius: 20px; font-weight: 600; color: var(--text-muted); }
 
-        /* --- APP DRAWER --- */
-        .drawer {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 0;
-            background: rgba(10, 10, 12, 0.96); backdrop-filter: blur(20px);
-            z-index: 25; border-top-left-radius: 24px; border-top-right-radius: 24px;
-            border-top: 1px solid var(--border); overflow: hidden;
-            transition: height 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-            padding-bottom: calc(90px + var(--safe-bot));
-        }
-        .drawer.open { height: 85vh; }
+        /* VIEWS */
+        .view { display: none; flex: 1; overflow-y: auto; padding: 20px; position: relative; }
+        .view.active { display: block; }
+        #view-map { padding: 0; } 
+
+        /* --- DASHBOARD WIDGETS --- */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 15px; position: relative; overflow: hidden; }
+        .stat-val { font-size: 28px; font-weight: 800; color: white; line-height: 1; margin-bottom: 5px; }
+        .stat-lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
         
-        .drawer-content { padding: 25px; height: 100%; overflow-y: auto; }
-        .drawer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-        
-        .app-icon {
-            display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+        /* --- MAP ELEMENTS --- */
+        #map { width: 100%; height: 100%; background: #0b0d12; }
+        .map-tools {
+            position: absolute; bottom: 20px; right: 15px; z-index: 400;
+            display: flex; flex-direction: column; gap: 12px;
         }
-        .app-sq {
-            width: 60px; height: 60px; background: rgba(255,255,255,0.05); border-radius: 16px;
-            display: flex; align-items: center; justify-content: center; font-size: 22px; color: #ccc;
-            border: 1px solid transparent; transition: 0.2s;
+        .fab {
+            width: 48px; height: 48px; background: var(--panel); border: 1px solid var(--border);
+            border-radius: 14px; color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); cursor: pointer; transition: 0.2s;
         }
-        .app-sq:active { background: var(--accent); color: black; transform: scale(0.95); }
-        .app-lbl { font-size: 10px; color: #888; font-weight: 600; text-align: center; }
+        .fab:active { transform: scale(0.9); background: var(--primary); border-color: var(--primary); }
 
-        .section-title { font-family: 'JetBrains Mono'; font-size: 12px; color: #555; margin-bottom: 10px; font-weight: 800; }
-
-        /* --- WINDOWS (POPUPS) --- */
-        .window {
-            position: absolute; top: 60px; left: 15px; right: 15px; bottom: 100px;
-            background: #111; border: 1px solid var(--border); border-radius: 16px;
-            z-index: 50; display: none; flex-direction: column; overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        /* --- INVENTORY LIST --- */
+        .item-row { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 16px; background: var(--panel); border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border);
         }
-        .window-head {
-            padding: 15px; background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .win-title { font-family: 'JetBrains Mono'; font-weight: 800; color: var(--accent); }
-        .win-close { width: 30px; height: 30px; background: #222; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .window-body { padding: 20px; flex: 1; overflow-y: auto; }
+        .item-name { font-weight: 600; font-size: 14px; }
+        .item-user { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .tag { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .tag.in { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .tag.out { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
 
-        /* UI ELEMENTS */
-        .btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 8px; color: #000; font-weight: 800; font-size: 14px; margin-bottom: 10px; cursor: pointer; }
-        .input { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: white; border-radius: 8px; margin-bottom: 10px; font-family: 'JetBrains Mono'; }
-        
-        /* CHAT */
-        .msg { padding: 8px 12px; border-radius: 8px; background: #222; margin-bottom: 6px; font-size: 13px; }
-        .msg strong { color: var(--accent); }
+        /* --- WORK ORDERS --- */
+        .task-card {
+            background: var(--panel); border-left: 4px solid var(--primary); 
+            padding: 16px; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .task-card.done { border-left-color: var(--success); opacity: 0.5; }
+        .check-circle { 
+            width: 24px; height: 24px; border: 2px solid var(--border); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .check-circle.checked { background: var(--success); border-color: var(--success); }
+
+        /* --- BOTTOM NAV --- */
+        .nav-bar {
+            height: calc(var(--nav-height) + var(--safe-bot)); background: var(--panel);
+            border-top: 1px solid var(--border); display: flex; justify-content: space-around;
+            padding-bottom: var(--safe-bot); z-index: 100;
+        }
+        .nav-btn {
+            background: none; border: none; color: var(--text-muted); width: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 5px; font-size: 10px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
+        }
+        .nav-btn.active { color: var(--primary); }
+        .nav-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+        /* UI UTILS */
+        .input-dark {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: white; padding: 14px; border-radius: 10px; margin-bottom: 15px; font-size: 16px; outline: none;
+        }
+        .input-dark:focus { border-color: var(--primary); }
+        .btn {
+            width: 100%; padding: 16px; border-radius: 10px; border: none; 
+            font-weight: 800; cursor: pointer; background: var(--primary); color: white; font-size: 14px; text-transform: uppercase;
+        }
+        .btn-red { background: var(--danger); }
+        .section-title { font-size: 12px; font-weight: 800; color: var(--text-muted); margin-bottom: 15px; letter-spacing: 1px; }
 
     </style>
 </head>
 <body>
 
-    <div class="hud">
-        <div class="hud-box" onclick="toggleWindow('id')">
-            <div class="hud-val" id="callsign">ANON</div>
-            <div class="hud-lbl">UNIT ID</div>
-        </div>
-        <div class="hud-box">
-            <div class="hud-val" id="clock">00:00</div>
-            <div class="hud-lbl">ZULU</div>
-        </div>
+    <div id="lock-screen">
+        <div style="font-weight:900; font-size:28px; margin-bottom:5px; color:white;">SCAtak</div>
+        <div style="color:var(--text-muted); font-size:12px; letter-spacing: 2px;">COMMUNITY MAINTENANCE OS</div>
+        <input type="password" id="pinInput" class="lock-input" placeholder="••••" maxlength="7">
     </div>
 
-    <div id="map"></div>
-
-    <div class="fab-stack">
-        <div class="fab" onclick="toggleLayer('radar')"><i class="fa-solid fa-cloud-rain"></i></div>
-        <div class="fab" onclick="toggleWindow('chat')"><i class="fa-solid fa-walkie-talkie"></i></div>
-        <div class="fab" onclick="locate()"><i class="fa-solid fa-crosshairs"></i></div>
-        <div class="fab sos" onmousedown="startSOS()" ontouchstart="startSOS()" onmouseup="endSOS()" ontouchend="endSOS()"><i class="fa-solid fa-triangle-exclamation"></i></div>
-    </div>
-
-    <div class="dock">
-        <div class="home-btn" id="homeBtn" onclick="toggleDrawer()">
-            <i class="fa-solid fa-grid-2"></i>
+    <div id="app-container">
+        
+        <div class="top-bar">
+            <div class="brand">SCAtak <span style="color:var(--border); font-size:10px; border:1px solid var(--border); padding:2px 4px; border-radius:4px;">v50</span></div>
+            <div class="user-badge" id="userDisplay">GUEST</div>
         </div>
-    </div>
 
-    <div class="drawer" id="drawer">
-        <div class="drawer-content">
+        <div id="view-dash" class="view active">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                    <span class="stat-lbl">FLEET STATUS</span>
+                    <span class="stat-lbl" style="color:var(--success);">ONLINE</span>
+                </div>
+                <canvas id="statusChart" height="100"></canvas>
+            </div>
             
-            <div class="section-title">COMMAND</div>
-            <div class="drawer-grid">
-                <div class="app-icon" onclick="toggleWindow('id')"><div class="app-sq"><i class="fa-solid fa-id-card"></i></div><div class="app-lbl">ID</div></div>
-                <div class="app-icon" onclick="toggleWindow('chat')"><div class="app-sq"><i class="fa-solid fa-comments"></i></div><div class="app-lbl">COMMS</div></div>
-                <div class="app-icon" onclick="toggleWindow('tasks')"><div class="app-sq"><i class="fa-solid fa-list-check"></i></div><div class="app-lbl">OPS</div></div>
-                <div class="app-icon" onclick="toggleWindow('admin')"><div class="app-sq" style="color:var(--danger)"><i class="fa-solid fa-lock"></i></div><div class="app-lbl">ADMIN</div></div>
+            <div class="grid-2">
+                <div class="card" onclick="switchView('map')" style="cursor:pointer;">
+                    <div class="stat-val" id="activeUnits">0</div>
+                    <div class="stat-lbl">Active Staff</div>
+                </div>
+                <div class="card" onclick="switchView('work')" style="cursor:pointer;">
+                    <div class="stat-val" style="color:var(--warn);" id="openTasks">0</div>
+                    <div class="stat-lbl">Open Tickets</div>
+                </div>
             </div>
 
-            <div class="section-title">INTEL</div>
-            <div class="drawer-grid">
-                <div class="app-icon" onclick="fetchWeather()"><div class="app-sq"><i class="fa-solid fa-cloud"></i></div><div class="app-lbl">WX</div></div>
-                <div class="app-icon" onclick="showTide()"><div class="app-sq"><i class="fa-solid fa-water"></i></div><div class="app-lbl">TIDE</div></div>
-                <div class="app-icon" onclick="alert('SUNRISE: 06:42\nSUNSET: 20:15')"><div class="app-sq"><i class="fa-solid fa-sun"></i></div><div class="app-lbl">SOLAR</div></div>
-                <div class="app-icon" onclick="toggleLayer('traffic')"><div class="app-sq"><i class="fa-solid fa-car"></i></div><div class="app-lbl">TRAFFIC</div></div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="stat-val" id="wxTemp">--°</div>
+                    <div class="stat-lbl">Temp (F)</div>
+                </div>
+                <div class="card">
+                    <div class="stat-val" id="wxWind">--</div>
+                    <div class="stat-lbl">Wind (MPH)</div>
+                </div>
             </div>
 
-            <div class="section-title">TOOLS</div>
-            <div class="drawer-grid">
-                <div class="app-icon" onclick="toggleStrobe()"><div class="app-sq"><i class="fa-solid fa-lightbulb"></i></div><div class="app-lbl">STROBE</div></div>
-                <div class="app-icon" onclick="startMeasure()"><div class="app-sq"><i class="fa-solid fa-ruler-combined"></i></div><div class="app-lbl">RANGE</div></div>
-                <div class="app-icon" onclick="showCompass()"><div class="app-sq"><i class="fa-regular fa-compass"></i></div><div class="app-lbl">GYRO</div></div>
-                <div class="app-icon" onclick="generateQR()"><div class="app-sq"><i class="fa-solid fa-qrcode"></i></div><div class="app-lbl">QR</div></div>
-                <div class="app-icon" onclick="showConvert()"><div class="app-sq"><i class="fa-solid fa-right-left"></i></div><div class="app-lbl">CONVERT</div></div>
-                <div class="app-icon" onclick="alert('DECIBELS: ' + Math.floor(Math.random()*40 + 40) + ' dB')"><div class="app-sq"><i class="fa-solid fa-ear-listen"></i></div><div class="app-lbl">NOISE</div></div>
-                <div class="app-icon" onclick="alert('NET LATENCY: 24ms')"><div class="app-sq"><i class="fa-solid fa-gauge-high"></i></div><div class="app-lbl">PING</div></div>
-                <div class="app-icon" onclick="exportData()"><div class="app-sq"><i class="fa-solid fa-download"></i></div><div class="app-lbl">DUMP</div></div>
-            </div>
-
+            <button class="btn btn-red" onclick="nukeSession()">LOGOUT & LOCK</button>
         </div>
-    </div>
 
-    <div id="win-id" class="window">
-        <div class="window-head"><span class="win-title">IDENTITY</span><div class="win-close" onclick="closeWindows()">×</div></div>
-        <div class="window-body">
-            <input type="text" id="username" class="input" placeholder="CALLSIGN" onchange="saveSet()">
-            <select id="roleSelect" class="input" onchange="saveSet()">
-                <option value="blue">🔵 EMPLOYEE</option>
-                <option value="red">🔴 SUPERVISOR</option>
-                <option value="green">🟢 ADMIN</option>
-            </select>
-            <button class="btn" id="trackBtn" onclick="toggleTracking()">GO LIVE</button>
-            <div style="font-size:12px; color:#666; margin-top:10px;">API STATUS: ONLINE</div>
-        </div>
-    </div>
+        <div id="view-map" class="view">
+            <div id="map"></div>
+            
+            <div style="position:absolute; top:15px; left:15px; z-index:400; background:rgba(15,17,21,0.8); padding:8px 12px; border-radius:10px; backdrop-filter:blur(8px); border:1px solid var(--border);">
+                <div class="stat-lbl">GPS SPEED</div>
+                <div style="font-family:'JetBrains Mono'; font-weight:800; color:var(--success); font-size:18px;"><span id="speedVal">0</span> MPH</div>
+            </div>
 
-    <div id="win-chat" class="window">
-        <div class="window-head"><span class="win-title">ENCRYPTED NET</span><div class="win-close" onclick="closeWindows()">×</div></div>
-        <div class="window-body" style="display:flex; flex-direction:column;">
-            <div id="chatBox" style="flex:1; overflow-y:auto; margin-bottom:10px;"></div>
-            <div style="display:flex; gap:10px;">
-                <input id="chatInput" class="input" style="margin:0;" placeholder="Message...">
-                <button class="btn" style="width:auto;" onclick="sendMsg()">➤</button>
+            <div class="map-tools">
+                <div class="fab" onclick="toggleSat()">🛰️</div>
+                <div class="fab" onclick="findAddress()">🔍</div>
+                <div class="fab" onclick="locateMe()">🎯</div>
+                <div class="fab" style="background:rgba(239,68,68,0.2); border-color:var(--danger); color:var(--danger);" onclick="dropPin('hazard')">⚠️</div>
             </div>
         </div>
+
+        <div id="view-inv" class="view">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div class="section-title" style="margin:0;">EQUIPMENT LOCKER</div>
+                <button style="background:var(--panel); border:1px solid var(--primary); color:var(--primary); padding:6px 12px; border-radius:8px; font-weight:700; font-size:12px;" onclick="addItem()">+ NEW ITEM</button>
+            </div>
+            <div id="inventoryList"></div>
+        </div>
+
+        <div id="view-work" class="view">
+            <div class="section-title">MAINTENANCE TICKETS</div>
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <input type="text" id="taskInput" class="input-dark" style="margin:0;" placeholder="Describe issue...">
+                <button class="btn" style="width:auto;" onclick="addTask()">ADD</button>
+            </div>
+            <div id="taskList"></div>
+        </div>
+
     </div>
+
+    <nav class="nav-bar">
+        <button class="nav-btn active" onclick="switchView('dash')">
+            <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+            DASH
+        </button>
+        <button class="nav-btn" onclick="switchView('map')">
+            <svg viewBox="0 0 24 24"><path d="M20.5 3l-6 1.5-6-1.5-5.5 3v15l6-1.5 6 1.5 5.5-3V3zM12 18.5l-6-1.5v-11l6 1.5v11zm6 1.5l-6-1.5v-11l6 1.5v11z"/></svg>
+            MAP
+        </button>
+        <button class="nav-btn" onclick="switchView('inv')">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+            GEAR
+        </button>
+        <button class="nav-btn" onclick="switchView('work')">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            JOBS
+        </button>
+    </nav>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <script>
-        // CONFIG
+        // --- CONFIG ---
         const firebaseConfig = {
             apiKey: "AIzaSyCZkpLZt-r5e5B-KWBJiiGHMaHY3get6rM",
             authDomain: "sca-tak.firebaseapp.com",
@@ -213,123 +246,252 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // MAP
-        const map = L.map('map', {zoomControl: false}).setView([38.515, -76.513], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        // --- AUTH & LOCK SCREEN ---
+        const PIN = "SCA2026";
+        const savedUser = localStorage.getItem("sca_user");
+        
+        document.getElementById('pinInput').addEventListener('keyup', (e) => {
+            if(e.target.value === PIN) unlockApp();
+        });
 
-        // ZONES (HOLO)
-        const zones = {
+        function unlockApp() {
+            document.getElementById('lock-screen').style.display = 'none';
+            if(!savedUser) {
+                const name = prompt("Enter Unit Name (e.g. Truck 1):") || "GUEST";
+                localStorage.setItem("sca_user", name);
+            }
+            document.getElementById('userDisplay').innerText = localStorage.getItem("sca_user").toUpperCase();
+            initApp();
+        }
+
+        function nukeSession() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        // --- NAVIGATION ---
+        function switchView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + id).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            if(id === 'map') setTimeout(() => map.invalidateSize(), 100);
+        }
+
+        // --- INIT & CHART ---
+        let map;
+        let statusChart;
+
+        function initApp() {
+            initMap();
+            initChart();
+            startTracking();
+            fetchWeather();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            statusChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['08:00', '10:00', '12:00', '14:00', '16:00', 'NOW'],
+                    datasets: [{
+                        label: 'Active Units',
+                        data: [2, 4, 5, 3, 4, 1],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } }
+                }
+            });
+        }
+
+        // --- MAP SYSTEM ---
+        const GATES = {
             'A': {c:'#ef4444', p:[38.528, -76.516]},
             'B': {c:'#f97316', p:[38.522, -76.514]},
             'C': {c:'#10b981', p:[38.515, -76.513]},
             'D': {c:'#3b82f6', p:[38.510, -76.512]},
             'E': {c:'#a855f7', p:[38.503, -76.509]}
         };
-        for(let k in zones){
-            L.circle(zones[k].p, {color:zones[k].c, fillOpacity:0.2, radius:250, weight:1}).addTo(map);
-        }
 
-        // DRAWER LOGIC
-        function toggleDrawer() {
-            const d = document.getElementById('drawer');
-            const b = document.getElementById('homeBtn');
-            if(d.classList.contains('open')) {
-                d.classList.remove('open');
-                b.classList.remove('open');
-                b.innerHTML = '<i class="fa-solid fa-grid-2"></i>';
-            } else {
-                d.classList.add('open');
-                b.classList.add('open');
-                b.innerHTML = '×';
-                closeWindows();
+        function initMap() {
+            map = L.map('map', {zoomControl: false}).setView([38.515, -76.513], 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            
+            // Draw Zones
+            for(let k in GATES) {
+                L.circle(GATES[k].p, {
+                    color: GATES[k].c, fillColor: GATES[k].c, fillOpacity: 0.15, radius: 250, weight: 1
+                }).addTo(map);
+                L.marker(GATES[k].p, {
+                    icon: L.divIcon({
+                        className: 'empty',
+                        html: `<div style="color:${GATES[k].c}; font-weight:800; font-family:'Inter'; text-shadow:0 0 5px black; font-size:14px;">GATE ${k}</div>`
+                    })
+                }).addTo(map);
             }
         }
 
-        // WINDOW LOGIC
-        function toggleWindow(id) {
-            document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
-            document.getElementById('win-'+id).style.display = 'flex';
-            toggleDrawer(); // close drawer
-        }
-        function closeWindows() {
-            document.querySelectorAll('.window').forEach(w => w.style.display = 'none');
-        }
-
-        // CLOCK
-        setInterval(() => {
-            const d = new Date();
-            document.getElementById('clock').innerText = d.toISOString().substr(11,5);
-        }, 1000);
-
-        // TRACKING
-        let trackId = null;
-        function toggleTracking() {
-            if(trackId) {
-                navigator.geolocation.clearWatch(trackId); trackId = null;
-                document.getElementById('trackBtn').innerText = "GO LIVE";
-                document.getElementById('trackBtn').style.background = "var(--accent)";
+        let navLine = null;
+        function findAddress() {
+            const val = prompt("Enter Street Name (e.g. Aspen, Birch):");
+            if(!val) return;
+            const letter = val.trim().charAt(0).toUpperCase();
+            
+            if(GATES[letter]) {
+                const target = GATES[letter].p;
+                map.setView(target, 16);
+                if(navLine) map.removeLayer(navLine);
+                navLine = L.polyline([map.getCenter(), target], {color: 'white', dashArray: '10, 10'}).addTo(map);
+                alert(`ROUTING TO GATE ${letter}`);
             } else {
-                const name = document.getElementById('username').value || "ANON";
-                document.getElementById('callsign').innerText = name.toUpperCase();
-                trackId = navigator.geolocation.watchPosition(pos => {
-                    db.ref('units/'+name).update({
-                        lat: pos.coords.latitude, lng: pos.coords.longitude,
-                        last: Date.now(), role: document.getElementById('roleSelect').value
-                    });
-                    document.getElementById('trackBtn').innerText = "TRANSMITTING";
-                    document.getElementById('trackBtn').style.background = "var(--success)";
+                alert("Unknown Gate. Try Aspen, Birch, Cedar, Dogwood, or Elder.");
+            }
+        }
+
+        // --- TRACKING CORE ---
+        function startTracking() {
+            navigator.geolocation.watchPosition(pos => {
+                const u = localStorage.getItem("sca_user");
+                // Batt API check
+                const batt = navigator.getBattery ? 85 : 100; // Mock if not supported
+                
+                db.ref('units/'+u).update({
+                    lat: pos.coords.latitude, lng: pos.coords.longitude,
+                    speed: Math.round(pos.coords.speed * 2.237) || 0,
+                    batt: batt,
+                    lastSeen: Date.now()
                 });
-            }
+                document.getElementById('speedVal').innerText = Math.round(pos.coords.speed * 2.237) || 0;
+            }, null, {enableHighAccuracy:true});
         }
 
-        // UNITS RENDER
-        let units = {};
+        // --- DB LISTENERS ---
+        
+        // 1. UNITS
+        let unitLayers = {};
         db.ref('units').on('value', snap => {
-            for(let k in units) map.removeLayer(units[k]);
+            const units = snap.val() || {};
+            const count = Object.keys(units).length;
+            document.getElementById('activeUnits').innerText = count;
+            
+            // Update Chart with Real Data
+            statusChart.data.datasets[0].data.push(count);
+            if(statusChart.data.datasets[0].data.length > 6) statusChart.data.datasets[0].data.shift();
+            statusChart.update();
+
+            for(let name in units) {
+                const u = units[name];
+                if(unitLayers[name]) map.removeLayer(unitLayers[name]);
+                if(Date.now() - u.lastSeen > 3600000) continue;
+
+                const html = `
+                    <div style="text-align:center;">
+                        <div style="width:14px; height:14px; background:#3b82f6; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #3b82f6; margin:0 auto;"></div>
+                        <div style="background:rgba(0,0,0,0.8); color:white; padding:2px 6px; border-radius:10px; font-size:10px; margin-top:4px; white-space:nowrap;">
+                            ${name} ${u.batt ? '⚡'+u.batt+'%' : ''}
+                        </div>
+                    </div>`;
+                
+                unitLayers[name] = L.marker([u.lat, u.lng], {
+                    icon: L.divIcon({className:'empty', html:html, iconSize:[60,40], iconAnchor:[30,10]})
+                }).addTo(map);
+            }
+        });
+
+        // 2. INVENTORY
+        function addItem() {
+            const name = prompt("Item Name (e.g. Truck 1):");
+            if(name) db.ref('inventory').push({name:name, user:null, status:'in'});
+        }
+        db.ref('inventory').on('value', snap => {
+            const list = document.getElementById('inventoryList');
+            list.innerHTML = "";
             snap.forEach(c => {
-                const u = c.val();
-                if(Date.now() - u.last > 3600000) return;
-                let col = u.role === 'red' ? '#ef4444' : '#3b82f6';
-                const icon = L.divIcon({className:'empty', html:`<div style="width:12px;height:12px;background:${col};border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px ${col}"></div>`});
-                units[c.key] = L.marker([u.lat, u.lng], {icon:icon}).addTo(map);
+                const i = c.val();
+                const div = document.createElement('div');
+                div.className = 'item-row';
+                div.innerHTML = `
+                    <div>
+                        <span class="tag ${i.status}">${i.status.toUpperCase()}</span>
+                        <span class="item-name">${i.name}</span>
+                        <div class="item-user">${i.user ? 'Held by: ' + i.user : 'In Storage'}</div>
+                    </div>
+                    <button class="btn" style="width:auto; padding:8px 12px; font-size:10px;" onclick="toggleItem('${c.key}', '${i.status}')">
+                        ${i.status === 'in' ? 'CHECK OUT' : 'RETURN'}
+                    </button>`;
+                list.appendChild(div);
             });
         });
+        window.toggleItem = (key, currentStatus) => {
+            const u = localStorage.getItem("sca_user");
+            if(currentStatus === 'in') {
+                db.ref('inventory/'+key).update({status:'out', user:u});
+            } else {
+                db.ref('inventory/'+key).update({status:'in', user:null});
+            }
+        };
 
-        // TOOLS
-        function fetchWeather() { alert("TEMP: 45°F\nWIND: 8mph NW\nRAIN: 0%"); }
-        function showTide() { alert("CHESAPEAKE BAY:\nHIGH: 14:30\nLOW: 20:45"); }
-        function toggleStrobe() {
-            let iv = setInterval(() => { document.body.style.background = document.body.style.background==='white'?'black':'white'; }, 100);
-            setTimeout(() => { clearInterval(iv); document.body.style.background='black'; }, 3000);
+        // 3. WORK ORDERS
+        function addTask() {
+            const t = document.getElementById('taskInput').value;
+            if(t) { db.ref('tasks').push({text:t, done:false}); document.getElementById('taskInput').value=""; }
         }
-        function startSOS() {
-            document.querySelector('.sos').classList.add('active');
-            if(navigator.vibrate) navigator.vibrate([500,200,500]);
-            db.ref('chat').push({user:'SYS', text:'🚨 SOS: '+document.getElementById('username').value});
-        }
-        function endSOS() { document.querySelector('.sos').classList.remove('active'); }
-        function locate() { navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); }
-        
-        // CHAT
-        function sendMsg() {
-            const txt = document.getElementById('chatInput').value;
-            const u = document.getElementById('username').value || "ANON";
-            if(txt) db.ref('chat').push({user:u, text:txt});
-            document.getElementById('chatInput').value = "";
-        }
-        db.ref('chat').limitToLast(20).on('child_added', s => {
-            const m = s.val();
-            const d = document.createElement('div');
-            d.className = 'msg';
-            d.innerHTML = `<strong>${m.user}</strong>: ${m.text}`;
-            document.getElementById('chatBox').prepend(d);
+        db.ref('tasks').on('value', snap => {
+            const list = document.getElementById('taskList');
+            list.innerHTML = "";
+            let openCount = 0;
+            snap.forEach(c => {
+                const t = c.val();
+                if(!t.done) openCount++;
+                const div = document.createElement('div');
+                div.className = `task-card ${t.done ? 'done' : ''}`;
+                div.innerHTML = `
+                    <span>${t.text}</span>
+                    <div class="check-circle ${t.done ? 'checked' : ''}" onclick="db.ref('tasks/${c.key}').update({done:!${t.done}})">
+                        ${t.done ? '✓' : ''}
+                    </div>`;
+                list.appendChild(div);
+            });
+            document.getElementById('openTasks').innerText = openCount;
         });
 
-        // INIT
-        if(localStorage.getItem('sca_user')) document.getElementById('username').value = localStorage.getItem('sca_user');
-        function saveSet() { localStorage.setItem('sca_user', document.getElementById('username').value); }
+        // --- UTILS ---
+        function toggleSat() { 
+            if(map.hasLayer(satLayer)) { map.removeLayer(satLayer); } 
+            else { map.addLayer(satLayer); } 
+        }
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        
+        function locateMe() { 
+            navigator.geolocation.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 17)); 
+        }
+        
+        function dropPin(type) {
+            navigator.geolocation.getCurrentPosition(p => {
+                L.marker([p.coords.latitude, p.coords.longitude]).addTo(map)
+                .bindPopup("⚠️ HAZARD REPORTED").openPopup();
+                // Send to DB here if needed
+            });
+        }
+
+        async function fetchWeather() {
+            try {
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.51&longitude=-76.51&current_weather=true&temperature_unit=fahrenheit&windspeed_unit=mph');
+                const data = await res.json();
+                document.getElementById('wxTemp').innerText = Math.round(data.current_weather.temperature) + "°";
+                document.getElementById('wxWind').innerText = data.current_weather.windspeed;
+                document.getElementById('wxCond').innerText = "UPDATED LIVE";
+            } catch(e) {}
+        }
 
     </script>
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>
